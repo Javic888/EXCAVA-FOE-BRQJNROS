@@ -1,8 +1,9 @@
---// TP HUB TERMINAL PARROT OS (FULL)
+--// TP HUB TERMINAL PARROT OS (FULL FINAL)
 --// Drag Full + RGB + Minimizar + Lista + Guardar con Nombre
 --// TP Instantáneo / TP Flotando + Velocidad
 --// Toggle Auto TP al morir
 --// WalkSpeed + JumpPower Editor
+--// Botón: Comenzar Teletransporte
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -241,16 +242,16 @@ saveBtn.Font = Enum.Font.Code
 saveBtn.TextSize = 14
 saveBtn.Parent = main
 
-local tpBtn = Instance.new("TextButton")
-tpBtn.Size = UDim2.new(0, 160, 0, 30)
-tpBtn.Position = UDim2.new(0, 180, 1, -35)
-tpBtn.Text = "TP al Punto"
-tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-tpBtn.BorderSizePixel = 0
-tpBtn.Font = Enum.Font.Code
-tpBtn.TextSize = 14
-tpBtn.Parent = main
+local startTpBtn = Instance.new("TextButton")
+startTpBtn.Size = UDim2.new(0, 160, 0, 30)
+startTpBtn.Position = UDim2.new(0, 180, 1, -35)
+startTpBtn.Text = "Comenzar TP"
+startTpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+startTpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+startTpBtn.BorderSizePixel = 0
+startTpBtn.Font = Enum.Font.Code
+startTpBtn.TextSize = 14
+startTpBtn.Parent = main
 
 local delBtn = Instance.new("TextButton")
 delBtn.Size = UDim2.new(0, 160, 0, 30)
@@ -379,7 +380,7 @@ saveBtn.MouseButton1Click:Connect(function()
 	SavePoint(inputBox.Text)
 end)
 
-tpBtn.MouseButton1Click:Connect(function()
+startTpBtn.MouseButton1Click:Connect(function()
 	TeleportToPoint()
 end)
 
@@ -400,7 +401,7 @@ miniBtn.MouseButton1Click:Connect(function()
 	inputBox.Visible = visible
 	listFrame.Visible = visible
 	saveBtn.Visible = visible
-	tpBtn.Visible = visible
+	startTpBtn.Visible = visible
 	delBtn.Visible = visible
 	toggleDeath.Visible = visible
 	toggleSmooth.Visible = visible
@@ -564,11 +565,12 @@ RunService.RenderStepped:Connect(function()
 	hue = hue + 0.002
 	if hue > 1 then hue = 0 end
 	rgbLine.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
-end)
+end
 
 -- Inicio
 Print("Sistema iniciado.")
 Print("ENTER para guardar puntos.")
+Print("Botón: Comenzar TP disponible.")
 Print("Modo TP flotando disponible.")
 Print("Puedes cambiar WalkSpeed y JumpPower.")
 RefreshList()
