@@ -1,1 +1,460 @@
+-- Cargar la librería DiscordLib
+local DiscordLib = loadstring(game:HttpGet("https://pastebin.com/raw/KRf0xDXQ"))()
 
+-- Crear ventana principal
+local Win1 = DiscordLib:Window("Javic00lkid - TP + Inmortal")
+local Tab1 = Win1:Server("Opv1 ", "")
+local TabGuiV1 = Tab1:Channel("CAVA FOR BRAINROTS")
+
+-- ============================================
+-- SISTEMA DE PUNTOS (GUARDADO LOCAL + ESP)
+-- ============================================
+local points = {}
+local pointsFolder = "Menu_Points"
+local currentSelectedPoint = nil
+local espEnabled = true
+local espObjects = {}
+
+-- Crear carpeta si no existe
+if not isfolder(pointsFolder) then
+    makefolder(pointsFolder)
+end
+
+-- Guardar todos los puntos
+local function saveAllPoints()
+    for name, data in pairs(points) do
+        local saveData = {
+            x = data.cframe.X,
+            y = data.cframe.Y,
+            z = data.cframe.Z,
+            rx = data.cframe:ToEulerAnglesXYZ(),
+            color = data.color or Color3.new(1, 0, 0)
+        }
+        writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
+    end
+    DiscordLib:Notification("Puntos", "Puntos guardados", "OK")
+end
+
+-- Cargar todos los puntos
+local function loadAllPoints()
+    points = {}
+    local files = listfiles(pointsFolder)
+    for _, file in ipairs(files) do
+        if file:match("%.json$") then
+            local content = readfile(file)
+            local data = game:GetService("HttpService"):JSONDecode(content)
+            local pointName = file:match("([^/]+)%.json$")
+            local cframe = CFrame.new(data.x, data.y, data.z) * CFrame.fromEulerAnglesXYZ(data.rx[1], data.rx[2], data.rx[3])
+            points[pointName] = {
+                cframe = cframe,
+                color = data.color and Color3.new(data.color.r, data.color.g, data.color.b) or Color3.new(1, 0, 0)
+            }
+        end
+    end
+    updatePointsList()
+    if espEnabled then updateESP() end
+    return #files
+end
+
+-- Guardar punto actual
+local function saveCurrentPoint(name, color)
+    if not name or name == "" then
+        DiscordLib:Notification("Error", "Ingresa un nombre", "OK")
+        return
+    end
+    local char = game.Players.LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        DiscordLib:Notification("Error", "Personaje no disponible", "OK")
+        return
+    end
+    points[name] = {
+        cframe = char.HumanoidRootPart.CFrame,
+        color = color or Color3.new(1, 0, 0)
+    }
+    saveAllPoints()
+    updatePointsList()
+    if espEnabled then updateESP() end
+    DiscordLib:Notification("Punto guardado", name, "OK")
+end
+
+-- Cargar punto (teletransportarse)
+local function loadPoint(name)
+    local point = points[name]
+    if not point then
+        DiscordLib:Notification("Error", "Punto no encontrado", "OK")
+        return
+    end
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = point.cframe
+        DiscordLib:Notification("Teletransporte", "Cargando: " .. name, "OK")
+    end
+end
+
+-- Eliminar punto
+local function deletePoint(name)
+    if points[name] then
+        points[name] = nil
+        local filePath = pointsFolder .. "/" .. name .. ".json"
+        if isfile(filePath) then delfile(filePath) end
+        updatePointsList()
+        if espEnabled then updateESP() end
+        DiscordLib:Notification("Punto eliminado", name, "OK")
+    end
+end
+
+-- Editar nombre de punto
+local function editPointName(oldName, newName)
+    if not points[oldName] then
+        DiscordLib:Notification("Error", "Punto no encontrado", "OK")
+        return
+    end
+    if newName == "" or points[newName] then
+        DiscordLib:Notification("Error", "Nombre inválido o ya existe", "OK")
+        return
+    end
+    points[newName] = points[oldName]
+    points[oldName] = nil
+    local oldPath = pointsFolder .. "/" .. oldName .. ".json"
+    if isfile(oldPath) then delfile(oldPath) end
+    saveAllPoints()
+    updatePointsList()
+    if espEnabled then updateESP() end
+    DiscordLib:Notification("Punto renombrado", oldName .. " → " .. newName, "OK")
+end
+
+-- ============================================
+-- ESP VISUAL (PUNTOS EN 3D)
+-- ============================================
+local function createESPForPoint(name, point)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "PointESP_" .. name
+    billboard.Size = UDim2.new(0, 200, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = workspace
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = point.color
+    frame.BackgroundTransparency = 0.5
+    frame.BorderSizePixel = 1
+    frame.BorderColor3 = Color3.new(1, 1, 1)
+    frame.Parent = billboard
+    
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = name .. "\n" .. string.format("X: %.0f Y: %.0f Z: %.0f", point.cframe.X, point.cframe.Y, point.cframe.Z)
+    text.TextColor3 = Color3.new(1, 1, 1)
+    text.TextScaled = true
+    text.Font = Enum.Font.GothamBold
+    text.Parent = frame
+    
+    -- Posicionar en el mundo
+    local part = Instance.new("Part")
+    part.Name = "ESP_Part_" .. name
+    part.Size = Vector3.new(0.5, 0.5, 0.5)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Transparency = 1
+    part.Position = point.cframe.Position
+    part.Parent = workspace
+    billboard.Adornee = part
+    
+    espObjects[name] = {billboard = billboard, part = part}
+end
+
+local function clearESP()
+    for name, objs in pairs(espObjects) do
+        if objs.billboard then objs.billboard:Destroy() end
+        if objs.part then objs.part:Destroy() end
+    end
+    espObjects = {}
+end
+
+local function updateESP()
+    clearESP()
+    if not espEnabled then return end
+    for name, point in pairs(points) do
+        createESPForPoint(name, point)
+    end
+end
+
+-- Toggle ESP
+local function toggleESP(state)
+    espEnabled = state
+    if state then
+        updateESP()
+    else
+        clearESP()
+    end
+end
+
+-- ============================================
+-- INTERFAZ DE PUNTOS CON ESP
+-- ============================================
+TabGuiV1:Label("━━━━━━━━━━ PUNTOS SYSTEM ━━━━━━━━━━")
+
+-- Entrada para nombre
+local pointNameBox = nil
+TabGuiV1:Textbox("Nombre del punto", "Ej: casa, boss", true, function(txt)
+    pointNameBox = txt
+end)
+
+-- Selector de color para el punto
+local selectedColor = Color3.new(1, 0, 0)
+TabGuiV1:Colorpicker("Color del punto", selectedColor, function(color)
+    selectedColor = color
+end)
+
+-- Botón guardar
+TabGuiV1:Button("💾 Guardar punto actual", function()
+    saveCurrentPoint(pointNameBox or "punto_" .. math.random(1000,9999), selectedColor)
+end)
+
+-- Dropdown de puntos
+pointsDropdown = TabGuiV1:Dropdown("Puntos guardados", {"(Cargando...)"}, function(value)
+    currentSelectedPoint = value
+end)
+updatePointsList()
+
+-- Botón cargar
+TabGuiV1:Button("📍 Cargar punto seleccionado", function()
+    if currentSelectedPoint and points[currentSelectedPoint] then
+        loadPoint(currentSelectedPoint)
+    else
+        DiscordLib:Notification("Error", "Selecciona un punto", "OK")
+    end
+end)
+
+-- Botón eliminar
+TabGuiV1:Button("🗑️ Eliminar punto seleccionado", function()
+    if currentSelectedPoint and points[currentSelectedPoint] then
+        deletePoint(currentSelectedPoint)
+        currentSelectedPoint = nil
+    end
+end)
+
+-- Botón editar nombre
+TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
+    if currentSelectedPoint and points[currentSelectedPoint] and newName and newName ~= "" then
+        editPointName(currentSelectedPoint, newName)
+        currentSelectedPoint = newName
+    end
+end)
+
+-- Botón recargar
+TabGuiV1:Button("🔄 Recargar puntos", function()
+    loadAllPoints()
+    updateESP()
+end)
+
+-- Toggle ESP
+TabGuiV1:Toggle("ESP visual (ON/OFF)", true, function(val)
+    toggleESP(val)
+end)
+
+-- ============================================
+-- SISTEMA DE INMORTALIDAD (3 MÉTODOS)
+-- ============================================
+TabGuiV1:Label("━━━━━━━━━━ INMORTALIDAD ━━━━━━━━━━")
+
+local currentImmortality = "v1"
+local immortalEnabled = false
+local immortalConnections = {}
+
+local function clearImmortality()
+    for _, conn in ipairs(immortalConnections) do
+        if conn and conn.Disconnect then pcall(function() conn:Disconnect() end) end
+    end
+    immortalConnections = {}
+end
+
+-- MÉTODO V1: Auto-revive rápido
+local function startImmortalV1()
+    local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not humanoid then return end
+    
+    local conn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if humanoid.Health <= 1 then
+            humanoid.Health = humanoid.MaxHealth
+        end
+    end)
+    table.insert(immortalConnections, conn)
+end
+
+-- MÉTODO V2: Loop constante + anti-caída
+local function startImmortalV2()
+    local conn = game:GetService("RunService").Stepped:Connect(function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            local hum = char.Humanoid
+            if hum.Health <= 1 then
+                hum.Health = hum.MaxHealth
+            end
+            if hum.PlatformStand == false then
+                hum.PlatformStand = true
+                wait(0.1)
+                hum.PlatformStand = false
+            end
+        end
+    end)
+    table.insert(immortalConnections, conn)
+end
+
+-- MÉTODO V3: Override total + reconexión
+local function startImmortalV3()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+    
+    local healthConn = char:FindFirstChild("Humanoid"):GetPropertyChangedSignal("Health"):Connect(function()
+        local hum = char:FindFirstChild("Humanoid")
+        if hum and hum.Health < hum.MaxHealth then
+            hum.Health = hum.MaxHealth
+        end
+    end)
+    table.insert(immortalConnections, healthConn)
+    
+    local damageConn = game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(newChar)
+        wait(0.5)
+        local hum = newChar:FindFirstChild("Humanoid")
+        if hum then
+            hum.Health = hum.MaxHealth
+            local breakConn = hum:GetPropertyChangedSignal("Health"):Connect(function()
+                if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+            end)
+            table.insert(immortalConnections, breakConn)
+        end
+    end)
+    table.insert(immortalConnections, damageConn)
+end
+
+local function applyImmortality()
+    clearImmortality()
+    if not immortalEnabled then return end
+    
+    if currentImmortality == "v1" then
+        startImmortalV1()
+    elseif currentImmortality == "v2" then
+        startImmortalV2()
+    elseif currentImmortality == "v3" then
+        startImmortalV3()
+    end
+    DiscordLib:Notification("Inmortalidad", "Modo " .. string.upper(currentImmortality) .. " activado", "OK")
+end
+
+local function setImmortalityMethod(method)
+    currentImmortality = method
+    if immortalEnabled then
+        applyImmortality()
+    end
+    DiscordLib:Notification("Inmortalidad", "Método cambiado a: " .. string.upper(method), "OK")
+end
+
+-- Toggle principal
+TabGuiV1:Toggle("Inmortalidad (ON/OFF)", false, function(val)
+    immortalEnabled = val
+    if val then
+        applyImmortality()
+    else
+        clearImmortality()
+        DiscordLib:Notification("Inmortalidad", "Desactivada", "OK")
+    end
+end)
+
+-- Dropdown métodos
+local methodDropdown = TabGuiV1:Dropdown("Método de Inmortalidad", {"v1 - Auto-revive rápido", "v2 - Loop + Anti-caída", "v3 - Override total"}, function(value)
+    if value == "v1 - Auto-revive rápido" then
+        setImmortalityMethod("v1")
+    elseif value == "v2 - Loop + Anti-caída" then
+        setImmortalityMethod("v2")
+    elseif value == "v3 - Override total" then
+        setImmortalityMethod("v3")
+    end
+end)
+methodDropdown:Select("v1 - Auto-revive rápido")
+
+-- ============================================
+-- FUNCIONALIDADES ORIGINALES
+-- ============================================
+TabGuiV1:Label("━━━━━━━━━━ CONFIGURACIÓN ━━━━━━━━━━")
+
+TabGuiV1:Textbox("WalkSpeed", "Velocidad (16 normal)", false, function(txt)
+    local speed = tonumber(txt)
+    if speed then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
+    end
+end)
+
+TabGuiV1:Toggle("QuitarJumpPower", false, function(val)
+    if val then
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = 0
+    else
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50
+    end
+end)
+
+TabGuiV1:Button("Abrir Consola", function()
+    game:GetService("StarterGui"):SetCore("DevConsoleVisible", true)
+end)
+
+TabGuiV1:Colorpicker("Imprimir Color", Color3.fromRGB(255, 255, 255), function(color)
+    print("Color seleccionado:", color)
+end)
+
+TabGuiV1:Bind("Apretar tecla F", Enum.KeyCode.F, function()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.Health = 0
+    end
+end)
+
+local slider = TabGuiV1:Slider("Cambio de Vida", 0, 100, 1, function(value)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.Health = value
+    end
+end)
+
+local dropdown = TabGuiV1:Dropdown("Lista de Funciones", {
+    "Mensaje", "TabSeparador", "BorrarTodo", "CambiarSliderA50",
+    "AgregarFuncion", "HacerGrande", "HacerPequeño"
+}, function(value)
+    if value == "Mensaje" then
+        DiscordLib:Notification("NombreScript", "Información", "Continue")
+    elseif value == "AgregarFuncion" then
+        dropdown:Add("Bug")
+    elseif value == "Bug" then
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 100, 0)
+        end
+    elseif value == "BorrarTodo" then
+        dropdown:Clear()
+    elseif value == "CambiarSliderA50" then
+        slider:Change(50)
+    elseif value == "TabSeparador" then
+        Tab1:Seperator()
+    elseif value == "HacerGrande" then
+        local char = game.Players.LocalPlayer.Character
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Size = part.Size * 2
+            end
+        end
+    elseif value == "HacerPequeño" then
+        local char = game.Players.LocalPlayer.Character
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Size = part.Size / 2
+            end
+        end
+    end
+end)
+
+-- ============================================
+-- INICIAR CARGA DE PUNTOS Y ESP
+-- ============================================
+loadAllPoints()
+toggleESP(true)
