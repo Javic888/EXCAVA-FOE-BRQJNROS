@@ -1,1 +1,404 @@
+--// TP HUB TERMINAL PARROT OS (LEGAL GUI)
+--// + Toggle Auto-TP al morir
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+--// Datos
+local Points = {}
+local SelectedIndex = nil
+local minimized = false
+
+-- Toggle auto tp muerte
+local autoRespawnTP = false
+local lastDeathCFrame = nil
+
+--// Funciones de personaje
+local function GetRoot()
+	local char = player.Character or player.CharacterAdded:Wait()
+	return char:WaitForChild("HumanoidRootPart")
+end
+
+--// Crear GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ParrotTPHub"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 460, 0, 360)
+main.Position = UDim2.new(0.5, -230, 0.5, -180)
+main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+main.BorderSizePixel = 0
+main.Parent = gui
+
+local topbar = Instance.new("Frame")
+topbar.Size = UDim2.new(1, 0, 0, 35)
+topbar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+topbar.BorderSizePixel = 0
+topbar.Parent = main
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -120, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "root@parrot:~# TP-HUB"
+title.TextColor3 = Color3.fromRGB(0, 255, 0)
+title.Font = Enum.Font.Code
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = topbar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 50, 1, 0)
+closeBtn.Position = UDim2.new(1, -50, 0, 0)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+closeBtn.BorderSizePixel = 0
+closeBtn.Font = Enum.Font.Code
+closeBtn.TextSize = 18
+closeBtn.Parent = topbar
+
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 50, 1, 0)
+miniBtn.Position = UDim2.new(1, -100, 0, 0)
+miniBtn.Text = "-"
+miniBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+miniBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+miniBtn.BorderSizePixel = 0
+miniBtn.Font = Enum.Font.Code
+miniBtn.TextSize = 20
+miniBtn.Parent = topbar
+
+local rgbLine = Instance.new("Frame")
+rgbLine.Size = UDim2.new(1, 0, 0, 2)
+rgbLine.Position = UDim2.new(0, 0, 1, -2)
+rgbLine.BorderSizePixel = 0
+rgbLine.Parent = topbar
+
+local output = Instance.new("TextLabel")
+output.Size = UDim2.new(1, -20, 0, 90)
+output.Position = UDim2.new(0, 10, 0, 45)
+output.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+output.BorderSizePixel = 0
+output.TextColor3 = Color3.fromRGB(0, 255, 0)
+output.Font = Enum.Font.Code
+output.TextSize = 14
+output.TextXAlignment = Enum.TextXAlignment.Left
+output.TextYAlignment = Enum.TextYAlignment.Top
+output.TextWrapped = true
+output.Text = "Bienvenido al TP Hub.\n"
+output.Parent = main
+
+local inputBox = Instance.new("TextBox")
+inputBox.Size = UDim2.new(1, -20, 0, 35)
+inputBox.Position = UDim2.new(0, 10, 0, 140)
+inputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+inputBox.BorderSizePixel = 0
+inputBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+inputBox.Font = Enum.Font.Code
+inputBox.TextSize = 16
+inputBox.PlaceholderText = "Escribe nombre del punto y presiona ENTER..."
+inputBox.Text = ""
+inputBox.ClearTextOnFocus = false
+inputBox.Parent = main
+
+-- Toggle boton
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(1, -20, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0, 180)
+toggleBtn.Text = "[ OFF ] Auto TP al morir"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Font = Enum.Font.Code
+toggleBtn.TextSize = 14
+toggleBtn.Parent = main
+
+local listFrame = Instance.new("Frame")
+listFrame.Size = UDim2.new(1, -20, 0, 110)
+listFrame.Position = UDim2.new(0, 10, 0, 215)
+listFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+listFrame.BorderSizePixel = 0
+listFrame.Parent = main
+
+local listTitle = Instance.new("TextLabel")
+listTitle.Size = UDim2.new(1, 0, 0, 20)
+listTitle.Position = UDim2.new(0, 0, 0, 0)
+listTitle.BackgroundTransparency = 1
+listTitle.Text = "Lista de puntos guardados:"
+listTitle.TextColor3 = Color3.fromRGB(0, 255, 0)
+listTitle.Font = Enum.Font.Code
+listTitle.TextSize = 14
+listTitle.TextXAlignment = Enum.TextXAlignment.Left
+listTitle.Parent = listFrame
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, 0, 1, -25)
+scroll.Position = UDim2.new(0, 0, 0, 25)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 5
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.Parent = listFrame
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = scroll
+layout.Padding = UDim.new(0, 3)
+
+local saveBtn = Instance.new("TextButton")
+saveBtn.Size = UDim2.new(0, 140, 0, 30)
+saveBtn.Position = UDim2.new(0, 10, 1, -35)
+saveBtn.Text = "Guardar Punto"
+saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+saveBtn.BorderSizePixel = 0
+saveBtn.Font = Enum.Font.Code
+saveBtn.TextSize = 14
+saveBtn.Parent = main
+
+local tpBtn = Instance.new("TextButton")
+tpBtn.Size = UDim2.new(0, 140, 0, 30)
+tpBtn.Position = UDim2.new(0, 160, 1, -35)
+tpBtn.Text = "TP al Punto"
+tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+tpBtn.BorderSizePixel = 0
+tpBtn.Font = Enum.Font.Code
+tpBtn.TextSize = 14
+tpBtn.Parent = main
+
+local delBtn = Instance.new("TextButton")
+delBtn.Size = UDim2.new(0, 140, 0, 30)
+delBtn.Position = UDim2.new(0, 310, 1, -35)
+delBtn.Text = "Eliminar Punto"
+delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+delBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0)
+delBtn.BorderSizePixel = 0
+delBtn.Font = Enum.Font.Code
+delBtn.TextSize = 14
+delBtn.Parent = main
+
+--// Terminal print
+local function Print(msg)
+	output.Text = output.Text .. "\n" .. msg
+end
+
+--// Lista refrescar
+local function RefreshList()
+	for _, v in pairs(scroll:GetChildren()) do
+		if v:IsA("TextButton") then
+			v:Destroy()
+		end
+	end
+
+	for i, data in ipairs(Points) do
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(1, -5, 0, 22)
+		btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		btn.BorderSizePixel = 0
+		btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+		btn.Font = Enum.Font.Code
+		btn.TextSize = 14
+
+		if SelectedIndex == i then
+			btn.Text = ">> [" .. i .. "] " .. data.Name
+		else
+			btn.Text = "   [" .. i .. "] " .. data.Name
+		end
+
+		btn.Parent = scroll
+
+		btn.MouseButton1Click:Connect(function()
+			SelectedIndex = i
+			Print("Seleccionaste: " .. data.Name .. " (Slot " .. i .. ")")
+			RefreshList()
+		end)
+	end
+
+	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 5)
+end
+
+--// Guardar punto
+local function SavePoint(name)
+	if not name or name == "" then
+		Print("ERROR: escribe un nombre.")
+		return
+	end
+
+	local root = GetRoot()
+	table.insert(Points, {Name = name, CFrame = root.CFrame})
+	SelectedIndex = #Points
+
+	Print("Guardado: " .. name .. " (Slot " .. SelectedIndex .. ")")
+	RefreshList()
+end
+
+--// TP punto
+local function TeleportToPoint()
+	if not SelectedIndex or not Points[SelectedIndex] then
+		Print("ERROR: selecciona un punto.")
+		return
+	end
+
+	local root = GetRoot()
+	root.CFrame = Points[SelectedIndex].CFrame
+	Print("TP -> " .. Points[SelectedIndex].Name)
+end
+
+--// Eliminar punto
+local function DeletePoint()
+	if not SelectedIndex or not Points[SelectedIndex] then
+		Print("ERROR: no hay punto seleccionado.")
+		return
+	end
+
+	Print("Eliminado: " .. Points[SelectedIndex].Name)
+	table.remove(Points, SelectedIndex)
+	SelectedIndex = nil
+	RefreshList()
+end
+
+--// Eventos
+saveBtn.MouseButton1Click:Connect(function()
+	SavePoint(inputBox.Text)
+end)
+
+tpBtn.MouseButton1Click:Connect(function()
+	TeleportToPoint()
+end)
+
+delBtn.MouseButton1Click:Connect(function()
+	DeletePoint()
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+	gui:Destroy()
+end)
+
+miniBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+
+	if minimized then
+		output.Visible = false
+		inputBox.Visible = false
+		listFrame.Visible = false
+		saveBtn.Visible = false
+		tpBtn.Visible = false
+		delBtn.Visible = false
+		toggleBtn.Visible = false
+		main.Size = UDim2.new(0, 460, 0, 35)
+		miniBtn.Text = "+"
+	else
+		output.Visible = true
+		inputBox.Visible = true
+		listFrame.Visible = true
+		saveBtn.Visible = true
+		tpBtn.Visible = true
+		delBtn.Visible = true
+		toggleBtn.Visible = true
+		main.Size = UDim2.new(0, 460, 0, 360)
+		miniBtn.Text = "-"
+	end
+end)
+
+-- ENTER guardar
+inputBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		SavePoint(inputBox.Text)
+		inputBox.Text = ""
+	end
+end)
+
+-- Toggle muerte
+toggleBtn.MouseButton1Click:Connect(function()
+	autoRespawnTP = not autoRespawnTP
+
+	if autoRespawnTP then
+		toggleBtn.Text = "[ ON ] Auto TP al morir"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+		Print("Auto TP al morir ACTIVADO.")
+	else
+		toggleBtn.Text = "[ OFF ] Auto TP al morir"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+		Print("Auto TP al morir DESACTIVADO.")
+	end
+end)
+
+-- Detectar muerte y guardar posicion
+local function SetupCharacter(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	local root = char:WaitForChild("HumanoidRootPart")
+
+	humanoid.Died:Connect(function()
+		if autoRespawnTP then
+			lastDeathCFrame = root.CFrame
+			Print("Muerte detectada, guardando posición...")
+		end
+	end)
+end
+
+-- Respawn TP
+player.CharacterAdded:Connect(function(char)
+	SetupCharacter(char)
+
+	task.wait(0.2)
+
+	if autoRespawnTP and lastDeathCFrame then
+		local root = char:WaitForChild("HumanoidRootPart")
+		root.CFrame = lastDeathCFrame
+		Print("TP automático al lugar de muerte completado.")
+	end
+end)
+
+-- Primera vez
+if player.Character then
+	SetupCharacter(player.Character)
+end
+
+-- DRAG
+local dragging = false
+local dragStart
+local startPos
+
+topbar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
+	end
+end)
+
+topbar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		main.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- RGB
+local hue = 0
+RunService.RenderStepped:Connect(function()
+	hue = hue + 0.002
+	if hue > 1 then hue = 0 end
+	rgbLine.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+end)
+
+Print("Sistema iniciado.")
+Print("Toggle disponible: Auto TP al morir.")
+RefreshList()
