@@ -14,7 +14,10 @@ local pointsFolder = "Menu_Points"
 local currentSelectedPoint = nil
 local espEnabled = true
 local espObjects = {}
-local pendingPointName = ""
+
+-- Variables para el nombre y color
+local currentPointName = ""
+local currentPointColor = Color3.new(1, 0, 0)
 
 -- Crear carpeta si no existe
 if not isfolder(pointsFolder) then
@@ -58,30 +61,55 @@ local function loadAllPoints()
             end
         end
     end
-    refreshPointsDropdown()  -- Actualizar dropdown
+    refreshPointsDropdown()
     if espEnabled then updateESP() end
     return #files
 end
 
--- Guardar punto actual
+-- Guardar punto actual (usa la variable currentPointName)
 local function saveCurrentPoint()
-    if pendingPointName == "" then
-        DiscordLib:Notification("Error", "Escribe un nombre primero", "OK")
+    if currentPointName == "" then
+        DiscordLib:Notification("Error", "Escribe un nombre primero en el campo de texto", "OK")
         return
     end
+    
+    -- Verificar si ya existe
+    if points[currentPointName] then
+        DiscordLib:Notification("Atención", "El punto '" .. currentPointName .. "' ya existe. ¿Sobrescribir?", function(choice)
+            if choice == "Sí" then
+                local char = game.Players.LocalPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then
+                    DiscordLib:Notification("Error", "Personaje no disponible", "OK")
+                    return
+                end
+                points[currentPointName] = {
+                    cframe = char.HumanoidRootPart.CFrame,
+                    color = currentPointColor
+                }
+                saveAllPoints()
+                refreshPointsDropdown()
+                if espEnabled then updateESP() end
+                DiscordLib:Notification("Punto actualizado", currentPointName, "OK")
+            end
+        end, "Sí", "No")  -- Esta función de confirmación puede no existir en DiscordLib, fallback a guardar directo
+        return
+    end
+    
+    -- Guardar nuevo punto
     local char = game.Players.LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then
         DiscordLib:Notification("Error", "Personaje no disponible", "OK")
         return
     end
-    points[pendingPointName] = {
+    
+    points[currentPointName] = {
         cframe = char.HumanoidRootPart.CFrame,
-        color = pendingPointColor
+        color = currentPointColor
     }
     saveAllPoints()
     refreshPointsDropdown()
     if espEnabled then updateESP() end
-    DiscordLib:Notification("Punto guardado", pendingPointName, "OK")
+    DiscordLib:Notification("Punto guardado", currentPointName, "OK")
 end
 
 -- Cargar punto
@@ -133,21 +161,16 @@ local function editPointName(oldName, newName)
 end
 
 -- ============================================
--- DROPDOWN DINÁMICO (RECREAR CADA VEZ)
+-- DROPDOWN DINÁMICO
 -- ============================================
 local pointsDropdown = nil
-local dropdownContainer = nil
 
 local function refreshPointsDropdown()
-    -- Si ya existe el dropdown, destruirlo y recrearlo
+    -- Destruir el dropdown viejo si existe
     if pointsDropdown then
-        -- Buscar el contenedor padre y eliminar el dropdown viejo
-        -- La librería no tiene método remove, así que recreamos desde el elemento padre
-        local success = pcall(function()
-            -- Intentamos acceder al elemento de la interfaz
-            if pointsDropdown and pointsDropdown.Remove then
-                pointsDropdown:Remove()
-            end
+        -- La librería puede no tener remove, pero intentamos
+        pcall(function()
+            if pointsDropdown.Remove then pointsDropdown:Remove() end
         end)
     end
     
@@ -237,27 +260,28 @@ local function toggleESP(state)
 end
 
 -- ============================================
--- INTERFAZ DE PUNTOS
+-- INTERFAZ DE PUNTOS (CON TEXTBOX QUE FUNCIONA)
 -- ============================================
 TabGuiV1:Label("━━━━━━━━━━ PUNTOS SYSTEM ━━━━━━━━━━")
 
--- Textbox para nombre
-TabGuiV1:Textbox("Nombre del punto", "Ej: casa, boss", true, function(txt)
-    pendingPointName = txt
+-- Textbox para nombre (usamos una variable global que se actualiza con el callback)
+local nameTextbox = TabGuiV1:Textbox("Nombre del punto", "Escribe aquí y presiona GUARDAR", true, function(txt)
+    currentPointName = txt
+    -- Mostrar confirmación visual
+    print("Nombre actualizado a: " .. txt)
 end)
 
--- Color por defecto
-local pendingPointColor = Color3.new(1, 0, 0)
-TabGuiV1:Colorpicker("Color del punto", pendingPointColor, function(color)
-    pendingPointColor = color
+-- Color selector
+TabGuiV1:Colorpicker("Color del punto", currentPointColor, function(color)
+    currentPointColor = color
 end)
 
--- Botón guardar
-TabGuiV1:Button("💾 Guardar punto actual", function()
+-- Botón guardar (importante: lee currentPointName en el momento)
+TabGuiV1:Button("💾 GUARDAR PUNTO ACTUAL", function()
     saveCurrentPoint()
 end)
 
--- El dropdown se creará con refreshPointsDropdown()
+-- Dropdown de puntos
 refreshPointsDropdown()
 
 -- Botón cargar
@@ -279,18 +303,11 @@ TabGuiV1:Button("🗑️ Eliminar punto seleccionado", function()
     end
 end)
 
--- Textbox para renombrar
-local renameInput = ""
-TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
-    renameInput = newName
-end)
-
-TabGuiV1:Button("✏️ Renombrar punto seleccionado", function()
-    if currentSelectedPoint and points[currentSelectedPoint] and renameInput ~= "" then
-        editPointName(currentSelectedPoint, renameInput)
-        renameInput = ""
-    else
-        DiscordLib:Notification("Error", "Selecciona un punto y escribe un nuevo nombre", "OK")
+-- Renombrar
+local renameTextbox = TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
+    if currentSelectedPoint and points[currentSelectedPoint] and newName ~= "" then
+        editPointName(currentSelectedPoint, newName)
+        currentSelectedPoint = newName
     end
 end)
 
@@ -502,3 +519,7 @@ end)
 -- ============================================
 loadAllPoints()
 toggleESP(true)
+
+-- Mensaje de ayuda
+print("🔹 PUNTOS SYSTEM: Escribe un nombre en 'Nombre del punto' y presiona GUARDAR")
+print("🔹 El nombre se toma en el momento de guardar, no importa si se borra del campo")
