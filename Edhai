@@ -15,6 +15,10 @@ local currentSelectedPoint = nil
 local espEnabled = true
 local espObjects = {}
 
+-- Variable para guardar el nombre temporalmente
+local pendingPointName = ""
+local pendingPointColor = Color3.new(1, 0, 0)
+
 -- Crear carpeta si no existe
 if not isfolder(pointsFolder) then
     makefolder(pointsFolder)
@@ -28,9 +32,16 @@ local function saveAllPoints()
             y = data.cframe.Y,
             z = data.cframe.Z,
             rx = data.cframe:ToEulerAnglesXYZ(),
-            color = data.color or Color3.new(1, 0, 0)
+            r = data.color.r,
+            g = data.color.g,
+            b = data.color.b
         }
-        writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
+        local success, err = pcall(function()
+            writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
+        end)
+        if not success then
+            warn("Error guardando " .. name .. ": " .. tostring(err))
+        end
     end
     DiscordLib:Notification("Puntos", "Puntos guardados", "OK")
 end
@@ -41,14 +52,16 @@ local function loadAllPoints()
     local files = listfiles(pointsFolder)
     for _, file in ipairs(files) do
         if file:match("%.json$") then
-            local content = readfile(file)
-            local data = game:GetService("HttpService"):JSONDecode(content)
-            local pointName = file:match("([^/]+)%.json$")
-            local cframe = CFrame.new(data.x, data.y, data.z) * CFrame.fromEulerAnglesXYZ(data.rx[1], data.rx[2], data.rx[3])
-            points[pointName] = {
-                cframe = cframe,
-                color = data.color and Color3.new(data.color.r, data.color.g, data.color.b) or Color3.new(1, 0, 0)
-            }
+            local success, content = pcall(readfile, file)
+            if success and content then
+                local data = game:GetService("HttpService"):JSONDecode(content)
+                local pointName = file:match("([^/]+)%.json$")
+                local cframe = CFrame.new(data.x, data.y, data.z) * CFrame.fromEulerAnglesXYZ(data.rx[1] or 0, data.rx[2] or 0, data.rx[3] or 0)
+                points[pointName] = {
+                    cframe = cframe,
+                    color = Color3.new(data.r or 1, data.g or 0, data.b or 0)
+                }
+            end
         end
     end
     updatePointsList()
@@ -57,9 +70,10 @@ local function loadAllPoints()
 end
 
 -- Guardar punto actual
-local function saveCurrentPoint(name, color)
+local function saveCurrentPoint()
+    local name = pendingPointName
     if not name or name == "" then
-        DiscordLib:Notification("Error", "Ingresa un nombre", "OK")
+        DiscordLib:Notification("Error", "Ingresa un nombre primero", "OK")
         return
     end
     local char = game.Players.LocalPlayer.Character
@@ -69,7 +83,7 @@ local function saveCurrentPoint(name, color)
     end
     points[name] = {
         cframe = char.HumanoidRootPart.CFrame,
-        color = color or Color3.new(1, 0, 0)
+        color = pendingPointColor
     }
     saveAllPoints()
     updatePointsList()
@@ -77,7 +91,7 @@ local function saveCurrentPoint(name, color)
     DiscordLib:Notification("Punto guardado", name, "OK")
 end
 
--- Cargar punto (teletransportarse)
+-- Cargar punto
 local function loadPoint(name)
     local point = points[name]
     if not point then
@@ -103,7 +117,7 @@ local function deletePoint(name)
     end
 end
 
--- Editar nombre de punto
+-- Editar nombre
 local function editPointName(oldName, newName)
     if not points[oldName] then
         DiscordLib:Notification("Error", "Punto no encontrado", "OK")
@@ -123,8 +137,26 @@ local function editPointName(oldName, newName)
     DiscordLib:Notification("Punto renombrado", oldName .. " → " .. newName, "OK")
 end
 
+-- Actualizar lista del dropdown
+local pointsDropdown = nil
+local function updatePointsList()
+    if pointsDropdown then
+        local pointNames = {}
+        for name, _ in pairs(points) do table.insert(pointNames, name) end
+        table.sort(pointNames)
+        pointsDropdown:Clear()
+        if #pointNames == 0 then
+            pointsDropdown:Add("(No hay puntos)")
+        else
+            for _, name in ipairs(pointNames) do
+                pointsDropdown:Add(name)
+            end
+        end
+    end
+end
+
 -- ============================================
--- ESP VISUAL (PUNTOS EN 3D)
+-- ESP VISUAL
 -- ============================================
 local function createESPForPoint(name, point)
     local billboard = Instance.new("BillboardGui")
@@ -132,7 +164,6 @@ local function createESPForPoint(name, point)
     billboard.Size = UDim2.new(0, 200, 0, 40)
     billboard.StudsOffset = Vector3.new(0, 2, 0)
     billboard.AlwaysOnTop = true
-    billboard.Parent = workspace
     
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
@@ -151,7 +182,6 @@ local function createESPForPoint(name, point)
     text.Font = Enum.Font.GothamBold
     text.Parent = frame
     
-    -- Posicionar en el mundo
     local part = Instance.new("Part")
     part.Name = "ESP_Part_" .. name
     part.Size = Vector3.new(0.5, 0.5, 0.5)
@@ -167,8 +197,10 @@ end
 
 local function clearESP()
     for name, objs in pairs(espObjects) do
-        if objs.billboard then objs.billboard:Destroy() end
-        if objs.part then objs.part:Destroy() end
+        pcall(function()
+            if objs.billboard then objs.billboard:Destroy() end
+            if objs.part then objs.part:Destroy() end
+        end)
     end
     espObjects = {}
 end
@@ -177,11 +209,10 @@ local function updateESP()
     clearESP()
     if not espEnabled then return end
     for name, point in pairs(points) do
-        createESPForPoint(name, point)
+        pcall(function() createESPForPoint(name, point) end)
     end
 end
 
--- Toggle ESP
 local function toggleESP(state)
     espEnabled = state
     if state then
@@ -192,32 +223,31 @@ local function toggleESP(state)
 end
 
 -- ============================================
--- INTERFAZ DE PUNTOS CON ESP
+-- INTERFAZ DE PUNTOS (CORREGIDA)
 -- ============================================
 TabGuiV1:Label("━━━━━━━━━━ PUNTOS SYSTEM ━━━━━━━━━━")
 
--- Entrada para nombre
-local pointNameBox = nil
+-- Textbox para nombre (con callback que guarda en variable)
 TabGuiV1:Textbox("Nombre del punto", "Ej: casa, boss", true, function(txt)
-    pointNameBox = txt
+    pendingPointName = txt
 end)
 
--- Selector de color para el punto
-local selectedColor = Color3.new(1, 0, 0)
-TabGuiV1:Colorpicker("Color del punto", selectedColor, function(color)
-    selectedColor = color
+-- Selector de color
+TabGuiV1:Colorpicker("Color del punto", pendingPointColor, function(color)
+    pendingPointColor = color
 end)
 
 -- Botón guardar
 TabGuiV1:Button("💾 Guardar punto actual", function()
-    saveCurrentPoint(pointNameBox or "punto_" .. math.random(1000,9999), selectedColor)
+    saveCurrentPoint()
 end)
 
 -- Dropdown de puntos
 pointsDropdown = TabGuiV1:Dropdown("Puntos guardados", {"(Cargando...)"}, function(value)
-    currentSelectedPoint = value
+    if value ~= "(No hay puntos)" then
+        currentSelectedPoint = value
+    end
 end)
-updatePointsList()
 
 -- Botón cargar
 TabGuiV1:Button("📍 Cargar punto seleccionado", function()
@@ -233,10 +263,12 @@ TabGuiV1:Button("🗑️ Eliminar punto seleccionado", function()
     if currentSelectedPoint and points[currentSelectedPoint] then
         deletePoint(currentSelectedPoint)
         currentSelectedPoint = nil
+    else
+        DiscordLib:Notification("Error", "Selecciona un punto", "OK")
     end
 end)
 
--- Botón editar nombre
+-- Textbox para renombrar
 TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
     if currentSelectedPoint and points[currentSelectedPoint] and newName and newName ~= "" then
         editPointName(currentSelectedPoint, newName)
@@ -266,7 +298,7 @@ local immortalConnections = {}
 
 local function clearImmortality()
     for _, conn in ipairs(immortalConnections) do
-        if conn and conn.Disconnect then pcall(function() conn:Disconnect() end) end
+        pcall(function() if conn and conn.Disconnect then conn:Disconnect() end end)
     end
     immortalConnections = {}
 end
@@ -295,7 +327,7 @@ local function startImmortalV2()
             end
             if hum.PlatformStand == false then
                 hum.PlatformStand = true
-                wait(0.1)
+                task.wait(0.1)
                 hum.PlatformStand = false
             end
         end
@@ -317,7 +349,7 @@ local function startImmortalV3()
     table.insert(immortalConnections, healthConn)
     
     local damageConn = game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(newChar)
-        wait(0.5)
+        task.wait(0.5)
         local hum = newChar:FindFirstChild("Humanoid")
         if hum then
             hum.Health = hum.MaxHealth
@@ -382,16 +414,19 @@ TabGuiV1:Label("━━━━━━━━━━ CONFIGURACIÓN ━━━━━━
 
 TabGuiV1:Textbox("WalkSpeed", "Velocidad (16 normal)", false, function(txt)
     local speed = tonumber(txt)
-    if speed then
+    if speed and game.Players.LocalPlayer.Character then
         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
     end
 end)
 
 TabGuiV1:Toggle("QuitarJumpPower", false, function(val)
-    if val then
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = 0
-    else
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50
+    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then
+        if val then
+            hum.JumpPower = 0
+        else
+            hum.JumpPower = 50
+        end
     end
 end)
 
