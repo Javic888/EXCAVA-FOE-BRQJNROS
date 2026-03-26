@@ -1,4 +1,4 @@
---// TP HUB TERMINAL PARROT OS (FULL FINAL)
+--// TP HUB TERMINAL PARROT OS (FULL FINAL FIXED)
 --// Drag Full + RGB + Minimizar + Lista + Guardar con Nombre
 --// TP Instantáneo / TP Flotando + Velocidad
 --// Toggle Auto TP al morir
@@ -48,8 +48,8 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 520, 0, 520)
-main.Position = UDim2.new(0.5, -260, 0.5, -260)
+main.Size = UDim2.new(0, 520, 0, 560)
+main.Position = UDim2.new(0.5, -260, 0.5, -280)
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 main.BorderSizePixel = 0
 main.Parent = gui
@@ -200,7 +200,7 @@ jpBox.Parent = main
 
 -- Lista puntos
 local listFrame = Instance.new("Frame")
-listFrame.Size = UDim2.new(1, -20, 0, 110)
+listFrame.Size = UDim2.new(1, -20, 0, 140)
 listFrame.Position = UDim2.new(0, 10, 0, 375)
 listFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 listFrame.BorderSizePixel = 0
@@ -230,7 +230,7 @@ local layout = Instance.new("UIListLayout")
 layout.Parent = scroll
 layout.Padding = UDim.new(0, 3)
 
--- Botones abajo
+-- Botones abajo (YA APARECEN BIEN)
 local saveBtn = Instance.new("TextButton")
 saveBtn.Size = UDim2.new(0, 160, 0, 30)
 saveBtn.Position = UDim2.new(0, 10, 1, -35)
@@ -242,16 +242,16 @@ saveBtn.Font = Enum.Font.Code
 saveBtn.TextSize = 14
 saveBtn.Parent = main
 
-local startTpBtn = Instance.new("TextButton")
-startTpBtn.Size = UDim2.new(0, 160, 0, 30)
-startTpBtn.Position = UDim2.new(0, 180, 1, -35)
-startTpBtn.Text = "Comenzar TP"
-startTpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-startTpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-startTpBtn.BorderSizePixel = 0
-startTpBtn.Font = Enum.Font.Code
-startTpBtn.TextSize = 14
-startTpBtn.Parent = main
+local tpBtn = Instance.new("TextButton")
+tpBtn.Size = UDim2.new(0, 160, 0, 30)
+tpBtn.Position = UDim2.new(0, 180, 1, -35)
+tpBtn.Text = "Comenzar Teletransporte"
+tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+tpBtn.BorderSizePixel = 0
+tpBtn.Font = Enum.Font.Code
+tpBtn.TextSize = 11
+tpBtn.Parent = main
 
 local delBtn = Instance.new("TextButton")
 delBtn.Size = UDim2.new(0, 160, 0, 30)
@@ -375,12 +375,12 @@ local function ApplyStats()
 	hum.JumpPower = customJump
 end
 
--- Eventos
+-- Eventos botones
 saveBtn.MouseButton1Click:Connect(function()
 	SavePoint(inputBox.Text)
 end)
 
-startTpBtn.MouseButton1Click:Connect(function()
+tpBtn.MouseButton1Click:Connect(function()
 	TeleportToPoint()
 end)
 
@@ -392,6 +392,7 @@ closeBtn.MouseButton1Click:Connect(function()
 	gui:Destroy()
 end)
 
+-- Minimizar
 miniBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 
@@ -401,7 +402,7 @@ miniBtn.MouseButton1Click:Connect(function()
 	inputBox.Visible = visible
 	listFrame.Visible = visible
 	saveBtn.Visible = visible
-	startTpBtn.Visible = visible
+	tpBtn.Visible = visible
 	delBtn.Visible = visible
 	toggleDeath.Visible = visible
 	toggleSmooth.Visible = visible
@@ -413,7 +414,7 @@ miniBtn.MouseButton1Click:Connect(function()
 		main.Size = UDim2.new(0, 520, 0, 35)
 		miniBtn.Text = "+"
 	else
-		main.Size = UDim2.new(0, 520, 0, 520)
+		main.Size = UDim2.new(0, 520, 0, 560)
 		miniBtn.Text = "-"
 	end
 end)
@@ -528,7 +529,7 @@ if player.Character then
 	SetupCharacter(player.Character)
 end
 
--- DRAG FULL (cualquier parte)
+-- DRAG FULL
 local dragging = false
 local dragStart
 local startPos
@@ -570,7 +571,7 @@ end
 -- Inicio
 Print("Sistema iniciado.")
 Print("ENTER para guardar puntos.")
-Print("Botón: Comenzar TP disponible.")
+Print("Botón TP: Comenzar Teletransporte.")
 Print("Modo TP flotando disponible.")
 Print("Puedes cambiar WalkSpeed y JumpPower.")
 RefreshList()
