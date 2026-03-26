@@ -1,37 +1,115 @@
--- Cargar la librería DiscordLib
-local DiscordLib = loadstring(game:HttpGet("https://pastebin.com/raw/KRf0xDXQ"))()
-
--- Crear ventana principal
-local Win1 = DiscordLib:Window("Javic00lkid - TP + Inmortal")
-local Tab1 = Win1:Server("Opv1 ", "")
-local TabGuiV1 = Tab1:Channel("CAVA FOR BRAINROTS")
+--[[
+    HUB PERSONAL - TP + INMORTALIDAD
+    Sistema de puntos funcional sin librerías problemáticas
+]]
 
 -- ============================================
--- SISTEMA DE PUNTOS (GUARDADO LOCAL + ESP)
+-- CREAR GUI MANUALMENTE
+-- ============================================
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "JaviHub"
+gui.Parent = game:GetService("CoreGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 350, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
+
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🔥 JAVI HUB - TP SYSTEM 🔥"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Parent = titleBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -30, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui.Enabled = not gui.Enabled
+end)
+
+local tabButtons = Instance.new("Frame")
+tabButtons.Size = UDim2.new(1, 0, 0, 35)
+tabButtons.Position = UDim2.new(0, 0, 0, 30)
+tabButtons.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+tabButtons.BorderSizePixel = 0
+tabButtons.Parent = mainFrame
+
+local tpTab = Instance.new("TextButton")
+tpTab.Size = UDim2.new(0.5, 0, 1, 0)
+tpTab.Position = UDim2.new(0, 0, 0, 0)
+tpTab.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+tpTab.Text = "📍 TP PUNTOS"
+tpTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpTab.Font = Enum.Font.GothamBold
+tpTab.TextSize = 14
+tpTab.BorderSizePixel = 0
+tpTab.Parent = tabButtons
+
+local immortalTab = Instance.new("TextButton")
+immortalTab.Size = UDim2.new(0.5, 0, 1, 0)
+immortalTab.Position = UDim2.new(0.5, 0, 0, 0)
+immortalTab.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+immortalTab.Text = "💀 INMORTALIDAD"
+immortalTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+immortalTab.Font = Enum.Font.GothamBold
+immortalTab.TextSize = 14
+immortalTab.BorderSizePixel = 0
+immortalTab.Parent = tabButtons
+
+-- Contenedor de contenido
+local contentContainer = Instance.new("ScrollingFrame")
+contentContainer.Size = UDim2.new(1, -10, 1, -75)
+contentContainer.Position = UDim2.new(0, 5, 0, 70)
+contentContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+contentContainer.BackgroundTransparency = 0.5
+contentContainer.BorderSizePixel = 0
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+contentContainer.ScrollBarThickness = 6
+contentContainer.Parent = mainFrame
+
+-- ============================================
+-- SISTEMA DE PUNTOS
 -- ============================================
 local points = {}
-local pointsFolder = "Menu_Points"
-local currentSelectedPoint = nil
-local espEnabled = true
-local espObjects = {}
+local pointsFolder = "JaviHub_Points"
+local selectedPoint = nil
 
--- Variables para el nombre y color
-local currentPointName = ""
-local currentPointColor = Color3.new(1, 0, 0)
-
--- Crear carpeta si no existe
 if not isfolder(pointsFolder) then
     makefolder(pointsFolder)
 end
 
--- Guardar todos los puntos
-local function saveAllPoints()
+local function savePoints()
     for name, data in pairs(points) do
         local saveData = {
             x = data.cframe.X,
             y = data.cframe.Y,
             z = data.cframe.Z,
-            rx = data.cframe:ToEulerAnglesXYZ(),
             r = data.color.r,
             g = data.color.g,
             b = data.color.b
@@ -40,172 +118,41 @@ local function saveAllPoints()
             writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
         end)
     end
-    DiscordLib:Notification("Puntos", "Puntos guardados", "OK")
 end
 
--- Cargar todos los puntos
-local function loadAllPoints()
+local function loadPoints()
     points = {}
     local files = listfiles(pointsFolder)
     for _, file in ipairs(files) do
         if file:match("%.json$") then
-            local success, content = pcall(readfile, file)
-            if success and content then
-                local data = game:GetService("HttpService"):JSONDecode(content)
-                local pointName = file:match("([^/]+)%.json$")
-                local cframe = CFrame.new(data.x, data.y, data.z) * CFrame.fromEulerAnglesXYZ(data.rx[1] or 0, data.rx[2] or 0, data.rx[3] or 0)
-                points[pointName] = {
-                    cframe = cframe,
-                    color = Color3.new(data.r or 1, data.g or 0, data.b or 0)
-                }
-            end
+            local content = readfile(file)
+            local data = game:GetService("HttpService"):JSONDecode(content)
+            local name = file:match("([^/]+)%.json$")
+            points[name] = {
+                cframe = CFrame.new(data.x, data.y, data.z),
+                color = Color3.new(data.r or 1, data.g or 0, data.b or 0)
+            }
         end
     end
-    refreshPointsDropdown()
-    if espEnabled then updateESP() end
-    return #files
-end
-
--- Guardar punto actual (usa la variable currentPointName)
-local function saveCurrentPoint()
-    if currentPointName == "" then
-        DiscordLib:Notification("Error", "Escribe un nombre primero en el campo de texto", "OK")
-        return
-    end
-    
-    -- Verificar si ya existe
-    if points[currentPointName] then
-        DiscordLib:Notification("Atención", "El punto '" .. currentPointName .. "' ya existe. ¿Sobrescribir?", function(choice)
-            if choice == "Sí" then
-                local char = game.Players.LocalPlayer.Character
-                if not char or not char:FindFirstChild("HumanoidRootPart") then
-                    DiscordLib:Notification("Error", "Personaje no disponible", "OK")
-                    return
-                end
-                points[currentPointName] = {
-                    cframe = char.HumanoidRootPart.CFrame,
-                    color = currentPointColor
-                }
-                saveAllPoints()
-                refreshPointsDropdown()
-                if espEnabled then updateESP() end
-                DiscordLib:Notification("Punto actualizado", currentPointName, "OK")
-            end
-        end, "Sí", "No")  -- Esta función de confirmación puede no existir en DiscordLib, fallback a guardar directo
-        return
-    end
-    
-    -- Guardar nuevo punto
-    local char = game.Players.LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        DiscordLib:Notification("Error", "Personaje no disponible", "OK")
-        return
-    end
-    
-    points[currentPointName] = {
-        cframe = char.HumanoidRootPart.CFrame,
-        color = currentPointColor
-    }
-    saveAllPoints()
-    refreshPointsDropdown()
-    if espEnabled then updateESP() end
-    DiscordLib:Notification("Punto guardado", currentPointName, "OK")
-end
-
--- Cargar punto
-local function loadPoint(name)
-    local point = points[name]
-    if not point then
-        DiscordLib:Notification("Error", "Punto no encontrado", "OK")
-        return
-    end
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = point.cframe
-        DiscordLib:Notification("Teletransporte", "Cargando: " .. name, "OK")
-    end
-end
-
--- Eliminar punto
-local function deletePoint(name)
-    if points[name] then
-        points[name] = nil
-        local filePath = pointsFolder .. "/" .. name .. ".json"
-        pcall(function() delfile(filePath) end)
-        refreshPointsDropdown()
-        if espEnabled then updateESP() end
-        DiscordLib:Notification("Punto eliminado", name, "OK")
-        if currentSelectedPoint == name then currentSelectedPoint = nil end
-    end
-end
-
--- Editar nombre
-local function editPointName(oldName, newName)
-    if not points[oldName] then
-        DiscordLib:Notification("Error", "Punto no encontrado", "OK")
-        return
-    end
-    if newName == "" or points[newName] then
-        DiscordLib:Notification("Error", "Nombre inválido o ya existe", "OK")
-        return
-    end
-    points[newName] = points[oldName]
-    points[oldName] = nil
-    local oldPath = pointsFolder .. "/" .. oldName .. ".json"
-    pcall(function() delfile(oldPath) end)
-    saveAllPoints()
-    refreshPointsDropdown()
-    if espEnabled then updateESP() end
-    DiscordLib:Notification("Punto renombrado", oldName .. " → " .. newName, "OK")
-    if currentSelectedPoint == oldName then currentSelectedPoint = newName end
-end
-
--- ============================================
--- DROPDOWN DINÁMICO
--- ============================================
-local pointsDropdown = nil
-
-local function refreshPointsDropdown()
-    -- Destruir el dropdown viejo si existe
-    if pointsDropdown then
-        -- La librería puede no tener remove, pero intentamos
-        pcall(function()
-            if pointsDropdown.Remove then pointsDropdown:Remove() end
-        end)
-    end
-    
-    -- Crear nueva lista de opciones
-    local options = {}
-    for name, _ in pairs(points) do
-        table.insert(options, name)
-    end
-    table.sort(options)
-    if #options == 0 then
-        table.insert(options, "(No hay puntos)")
-    end
-    
-    -- Crear nuevo dropdown
-    pointsDropdown = TabGuiV1:Dropdown("Puntos guardados", options, function(value)
-        if value ~= "(No hay puntos)" then
-            currentSelectedPoint = value
-        end
-    end)
 end
 
 -- ============================================
 -- ESP VISUAL
 -- ============================================
-local function createESPForPoint(name, point)
+local espObjects = {}
+local espEnabled = true
+
+local function createESP(name, point)
     local billboard = Instance.new("BillboardGui")
-    billboard.Name = "PointESP_" .. name
-    billboard.Size = UDim2.new(0, 200, 0, 40)
+    billboard.Name = "ESP_" .. name
+    billboard.Size = UDim2.new(0, 150, 0, 35)
     billboard.StudsOffset = Vector3.new(0, 2, 0)
     billboard.AlwaysOnTop = true
     
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
     frame.BackgroundColor3 = point.color
-    frame.BackgroundTransparency = 0.5
+    frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 1
     frame.BorderColor3 = Color3.new(1, 1, 1)
     frame.Parent = billboard
@@ -213,14 +160,14 @@ local function createESPForPoint(name, point)
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(1, 0, 1, 0)
     text.BackgroundTransparency = 1
-    text.Text = name .. "\n" .. string.format("X: %.0f Y: %.0f Z: %.0f", point.cframe.X, point.cframe.Y, point.cframe.Z)
+    text.Text = name
     text.TextColor3 = Color3.new(1, 1, 1)
     text.TextScaled = true
     text.Font = Enum.Font.GothamBold
     text.Parent = frame
     
     local part = Instance.new("Part")
-    part.Name = "ESP_Part_" .. name
+    part.Name = "ESPPart_" .. name
     part.Size = Vector3.new(0.5, 0.5, 0.5)
     part.Anchored = true
     part.CanCollide = false
@@ -233,7 +180,7 @@ local function createESPForPoint(name, point)
 end
 
 local function clearESP()
-    for name, objs in pairs(espObjects) do
+    for _, objs in pairs(espObjects) do
         pcall(function()
             if objs.billboard then objs.billboard:Destroy() end
             if objs.part then objs.part:Destroy() end
@@ -246,89 +193,414 @@ local function updateESP()
     clearESP()
     if not espEnabled then return end
     for name, point in pairs(points) do
-        pcall(function() createESPForPoint(name, point) end)
-    end
-end
-
-local function toggleESP(state)
-    espEnabled = state
-    if state then
-        updateESP()
-    else
-        clearESP()
+        pcall(function() createESP(name, point) end)
     end
 end
 
 -- ============================================
--- INTERFAZ DE PUNTOS (CON TEXTBOX QUE FUNCIONA)
+-- FUNCIONES DE PUNTOS
 -- ============================================
-TabGuiV1:Label("━━━━━━━━━━ PUNTOS SYSTEM ━━━━━━━━━━")
-
--- Textbox para nombre (usamos una variable global que se actualiza con el callback)
-local nameTextbox = TabGuiV1:Textbox("Nombre del punto", "Escribe aquí y presiona GUARDAR", true, function(txt)
-    currentPointName = txt
-    -- Mostrar confirmación visual
-    print("Nombre actualizado a: " .. txt)
-end)
-
--- Color selector
-TabGuiV1:Colorpicker("Color del punto", currentPointColor, function(color)
-    currentPointColor = color
-end)
-
--- Botón guardar (importante: lee currentPointName en el momento)
-TabGuiV1:Button("💾 GUARDAR PUNTO ACTUAL", function()
-    saveCurrentPoint()
-end)
-
--- Dropdown de puntos
-refreshPointsDropdown()
-
--- Botón cargar
-TabGuiV1:Button("📍 Cargar punto seleccionado", function()
-    if currentSelectedPoint and points[currentSelectedPoint] then
-        loadPoint(currentSelectedPoint)
-    else
-        DiscordLib:Notification("Error", "Selecciona un punto de la lista", "OK")
+local function refreshPointList()
+    -- Limpiar contenedor
+    for _, child in pairs(contentContainer:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("Frame") then
+            child:Destroy()
+        end
     end
-end)
-
--- Botón eliminar
-TabGuiV1:Button("🗑️ Eliminar punto seleccionado", function()
-    if currentSelectedPoint and points[currentSelectedPoint] then
-        deletePoint(currentSelectedPoint)
-        currentSelectedPoint = nil
-    else
-        DiscordLib:Notification("Error", "Selecciona un punto de la lista", "OK")
+    
+    local yOffset = 5
+    local pointList = {}
+    for name, _ in pairs(points) do
+        table.insert(pointList, name)
     end
-end)
-
--- Renombrar
-local renameTextbox = TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
-    if currentSelectedPoint and points[currentSelectedPoint] and newName ~= "" then
-        editPointName(currentSelectedPoint, newName)
-        currentSelectedPoint = newName
+    table.sort(pointList)
+    
+    -- Mostrar puntos
+    for _, name in ipairs(pointList) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 35)
+        btn.Position = UDim2.new(0, 5, 0, yOffset)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+        btn.Text = "📍 " .. name
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 14
+        btn.BorderSizePixel = 0
+        btn.Parent = contentContainer
+        
+        btn.MouseButton1Click:Connect(function()
+            selectedPoint = name
+            -- Resaltar seleccionado
+            for _, child in pairs(contentContainer:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+        end)
+        
+        yOffset = yOffset + 40
     end
-end)
+    
+    contentContainer.CanvasSize = UDim2.new(0, 0, 0, yOffset + 10)
+end
 
--- Botón recargar
-TabGuiV1:Button("🔄 Recargar puntos", function()
-    loadAllPoints()
+-- Función para guardar punto
+local function savePoint(name, color)
+    if name == "" then
+        return false, "Escribe un nombre"
+    end
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return false, "Personaje no disponible"
+    end
+    points[name] = {
+        cframe = char.HumanoidRootPart.CFrame,
+        color = color or Color3.new(1, 0, 0)
+    }
+    savePoints()
     updateESP()
-end)
+    refreshPointList()
+    return true, "Punto guardado: " .. name
+end
 
--- Toggle ESP
-TabGuiV1:Toggle("ESP visual (ON/OFF)", true, function(val)
-    toggleESP(val)
-end)
+local function loadPoint(name)
+    local point = points[name]
+    if not point then
+        return false, "Punto no encontrado"
+    end
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = point.cframe
+        return true, "Teletransportado a: " .. name
+    end
+    return false, "No se pudo teletransportar"
+end
+
+local function deletePoint(name)
+    if points[name] then
+        points[name] = nil
+        local filePath = pointsFolder .. "/" .. name .. ".json"
+        pcall(function() delfile(filePath) end)
+        savePoints()
+        updateESP()
+        refreshPointList()
+        if selectedPoint == name then selectedPoint = nil end
+        return true, "Punto eliminado: " .. name
+    end
+    return false, "Punto no encontrado"
+end
 
 -- ============================================
--- SISTEMA DE INMORTALIDAD (3 MÉTODOS)
+-- INTERFAZ DE PUNTOS
 -- ============================================
-TabGuiV1:Label("━━━━━━━━━━ INMORTALIDAD ━━━━━━━━━━")
+local function showTPPanel()
+    -- Limpiar contenedor
+    for _, child in pairs(contentContainer:GetChildren()) do
+        child:Destroy()
+    end
+    
+    -- Campo de nombre
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, -10, 0, 25)
+    nameLabel.Position = UDim2.new(0, 5, 0, 5)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "📝 NOMBRE DEL PUNTO:"
+    nameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextSize = 12
+    nameLabel.Parent = contentContainer
+    
+    local nameBox = Instance.new("TextBox")
+    nameBox.Size = UDim2.new(1, -10, 0, 30)
+    nameBox.Position = UDim2.new(0, 5, 0, 32)
+    nameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    nameBox.Text = ""
+    nameBox.PlaceholderText = "Ej: casa, boss, tienda"
+    nameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameBox.Font = Enum.Font.Gotham
+    nameBox.TextSize = 14
+    nameBox.BorderSizePixel = 0
+    nameBox.Parent = contentContainer
+    
+    -- Selector de color simplificado
+    local colorLabel = Instance.new("TextLabel")
+    colorLabel.Size = UDim2.new(1, -10, 0, 25)
+    colorLabel.Position = UDim2.new(0, 5, 0, 67)
+    colorLabel.BackgroundTransparency = 1
+    colorLabel.Text = "🎨 COLOR DEL ESP:"
+    colorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    colorLabel.TextXAlignment = Enum.TextXAlignment.Left
+    colorLabel.Font = Enum.Font.Gotham
+    colorLabel.TextSize = 12
+    colorLabel.Parent = contentContainer
+    
+    local selectedColor = Color3.new(1, 0, 0)
+    local colorDisplay = Instance.new("Frame")
+    colorDisplay.Size = UDim2.new(0, 40, 0, 30)
+    colorDisplay.Position = UDim2.new(0, 5, 0, 94)
+    colorDisplay.BackgroundColor3 = selectedColor
+    colorDisplay.BorderSizePixel = 1
+    colorDisplay.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    colorDisplay.Parent = contentContainer
+    
+    local colorBtn = Instance.new("TextButton")
+    colorBtn.Size = UDim2.new(0, 80, 0, 30)
+    colorBtn.Position = UDim2.new(0, 55, 0, 94)
+    colorBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    colorBtn.Text = "CAMBIAR COLOR"
+    colorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    colorBtn.Font = Enum.Font.Gotham
+    colorBtn.TextSize = 12
+    colorBtn.BorderSizePixel = 0
+    colorBtn.Parent = contentContainer
+    
+    local colors = {
+        {name = "Rojo", color = Color3.new(1, 0, 0)},
+        {name = "Verde", color = Color3.new(0, 1, 0)},
+        {name = "Azul", color = Color3.new(0, 0, 1)},
+        {name = "Amarillo", color = Color3.new(1, 1, 0)},
+        {name = "Naranja", color = Color3.new(1, 0.5, 0)},
+        {name = "Rosa", color = Color3.new(1, 0, 1)},
+        {name = "Cian", color = Color3.new(0, 1, 1)},
+    }
+    local colorIndex = 1
+    colorBtn.MouseButton1Click:Connect(function()
+        colorIndex = colorIndex % #colors + 1
+        selectedColor = colors[colorIndex].color
+        colorDisplay.BackgroundColor3 = selectedColor
+    end)
+    
+    -- Botón guardar
+    local saveBtn = Instance.new("TextButton")
+    saveBtn.Size = UDim2.new(1, -10, 0, 40)
+    saveBtn.Position = UDim2.new(0, 5, 0, 134)
+    saveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    saveBtn.Text = "💾 GUARDAR PUNTO ACTUAL"
+    saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    saveBtn.Font = Enum.Font.GothamBold
+    saveBtn.TextSize = 14
+    saveBtn.BorderSizePixel = 0
+    saveBtn.Parent = contentContainer
+    
+    saveBtn.MouseButton1Click:Connect(function()
+        local name = nameBox.Text
+        if name == "" then
+            nameBox.PlaceholderText = "⚠️ ESCRIBE UN NOMBRE PRIMERO"
+            return
+        end
+        local success, msg = savePoint(name, selectedColor)
+        if success then
+            nameBox.Text = ""
+            refreshPointList()
+            showTPPanel() -- Recargar panel para mostrar lista actualizada
+        end
+        -- Mostrar notificación simple
+        local notif = Instance.new("TextLabel")
+        notif.Size = UDim2.new(0, 200, 0, 30)
+        notif.Position = UDim2.new(0.5, -100, 0, 200)
+        notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        notif.BackgroundTransparency = 0.3
+        notif.Text = msg
+        notif.TextColor3 = success and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        notif.Font = Enum.Font.Gotham
+        notif.TextSize = 12
+        notif.Parent = gui
+        game:GetService("Debris"):AddItem(notif, 2)
+    end)
+    
+    -- Separador
+    local sep = Instance.new("Frame")
+    sep.Size = UDim2.new(1, -10, 0, 1)
+    sep.Position = UDim2.new(0, 5, 0, 184)
+    sep.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+    sep.BorderSizePixel = 0
+    sep.Parent = contentContainer
+    
+    -- Título lista
+    local listTitle = Instance.new("TextLabel")
+    listTitle.Size = UDim2.new(1, -10, 0, 25)
+    listTitle.Position = UDim2.new(0, 5, 0, 190)
+    listTitle.BackgroundTransparency = 1
+    listTitle.Text = "📌 PUNTOS GUARDADOS:"
+    listTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    listTitle.TextXAlignment = Enum.TextXAlignment.Left
+    listTitle.Font = Enum.Font.GothamBold
+    listTitle.TextSize = 12
+    listTitle.Parent = contentContainer
+    
+    -- Contenedor de la lista
+    local listContainer = Instance.new("ScrollingFrame")
+    listContainer.Size = UDim2.new(1, -10, 0, 200)
+    listContainer.Position = UDim2.new(0, 5, 0, 215)
+    listContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    listContainer.BorderSizePixel = 1
+    listContainer.BorderColor3 = Color3.fromRGB(60, 60, 70)
+    listContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    listContainer.ScrollBarThickness = 6
+    listContainer.Parent = contentContainer
+    
+    -- Botones de acción
+    local loadBtn = Instance.new("TextButton")
+    loadBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    loadBtn.Position = UDim2.new(0, 5, 0, 425)
+    loadBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
+    loadBtn.Text = "📍 CARGAR"
+    loadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    loadBtn.Font = Enum.Font.GothamBold
+    loadBtn.TextSize = 14
+    loadBtn.BorderSizePixel = 0
+    loadBtn.Parent = contentContainer
+    
+    local deleteBtn = Instance.new("TextButton")
+    deleteBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    deleteBtn.Position = UDim2.new(0.52, 0, 0, 425)
+    deleteBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    deleteBtn.Text = "🗑️ ELIMINAR"
+    deleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    deleteBtn.Font = Enum.Font.GothamBold
+    deleteBtn.TextSize = 14
+    deleteBtn.BorderSizePixel = 0
+    deleteBtn.Parent = contentContainer
+    
+    local espToggle = Instance.new("TextButton")
+    espToggle.Size = UDim2.new(0.48, -5, 0, 35)
+    espToggle.Position = UDim2.new(0, 5, 0, 465)
+    espToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(100, 50, 50)
+    espToggle.Text = espEnabled and "👁️ ESP: ON" or "👁️ ESP: OFF"
+    espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    espToggle.Font = Enum.Font.GothamBold
+    espToggle.TextSize = 14
+    espToggle.BorderSizePixel = 0
+    espToggle.Parent = contentContainer
+    
+    local refreshBtn = Instance.new("TextButton")
+    refreshBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    refreshBtn.Position = UDim2.new(0.52, 0, 0, 465)
+    refreshBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 100)
+    refreshBtn.Text = "🔄 RECARGAR"
+    refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    refreshBtn.Font = Enum.Font.GothamBold
+    refreshBtn.TextSize = 14
+    refreshBtn.BorderSizePixel = 0
+    refreshBtn.Parent = contentContainer
+    
+    -- Función para actualizar la lista de puntos
+    local function updatePointList()
+        for _, child in pairs(listContainer:GetChildren()) do
+            child:Destroy()
+        end
+        
+        local yOffset = 5
+        local pointNames = {}
+        for name, _ in pairs(points) do
+            table.insert(pointNames, name)
+        end
+        table.sort(pointNames)
+        
+        for _, name in ipairs(pointNames) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -10, 0, 30)
+            btn.Position = UDim2.new(0, 5, 0, yOffset)
+            btn.BackgroundColor3 = selectedPoint == name and Color3.fromRGB(70, 70, 80) or Color3.fromRGB(45, 45, 50)
+            btn.Text = "📍 " .. name
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 12
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.BorderSizePixel = 0
+            btn.Parent = listContainer
+            
+            btn.MouseButton1Click:Connect(function()
+                selectedPoint = name
+                for _, child in pairs(listContainer:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                    end
+                end
+                btn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+            end)
+            
+            yOffset = yOffset + 35
+        end
+        
+        listContainer.CanvasSize = UDim2.new(0, 0, 0, yOffset + 5)
+    end
+    
+    -- Acciones
+    loadBtn.MouseButton1Click:Connect(function()
+        if selectedPoint and points[selectedPoint] then
+            local success, msg = loadPoint(selectedPoint)
+            local notif = Instance.new("TextLabel")
+            notif.Size = UDim2.new(0, 200, 0, 30)
+            notif.Position = UDim2.new(0.5, -100, 0, 200)
+            notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            notif.BackgroundTransparency = 0.3
+            notif.Text = msg
+            notif.TextColor3 = success and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            notif.Font = Enum.Font.Gotham
+            notif.TextSize = 12
+            notif.Parent = gui
+            game:GetService("Debris"):AddItem(notif, 2)
+        end
+    end)
+    
+    deleteBtn.MouseButton1Click:Connect(function()
+        if selectedPoint then
+            local success, msg = deletePoint(selectedPoint)
+            selectedPoint = nil
+            local notif = Instance.new("TextLabel")
+            notif.Size = UDim2.new(0, 200, 0, 30)
+            notif.Position = UDim2.new(0.5, -100, 0, 200)
+            notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            notif.BackgroundTransparency = 0.3
+            notif.Text = msg
+            notif.TextColor3 = success and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            notif.Font = Enum.Font.Gotham
+            notif.TextSize = 12
+            notif.Parent = gui
+            game:GetService("Debris"):AddItem(notif, 2)
+            updatePointList()
+        end
+    end)
+    
+    espToggle.MouseButton1Click:Connect(function()
+        espEnabled = not espEnabled
+        espToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(100, 50, 50)
+        espToggle.Text = espEnabled and "👁️ ESP: ON" or "👁️ ESP: OFF"
+        if espEnabled then
+            updateESP()
+        else
+            clearESP()
+        end
+    end)
+    
+    refreshBtn.MouseButton1Click:Connect(function()
+        loadPoints()
+        updateESP()
+        updatePointList()
+        local notif = Instance.new("TextLabel")
+        notif.Size = UDim2.new(0, 150, 0, 30)
+        notif.Position = UDim2.new(0.5, -75, 0, 200)
+        notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        notif.BackgroundTransparency = 0.3
+        notif.Text = "Puntos recargados: " .. #points
+        notif.TextColor3 = Color3.fromRGB(0, 255, 0)
+        notif.Font = Enum.Font.Gotham
+        notif.TextSize = 12
+        notif.Parent = gui
+        game:GetService("Debris"):AddItem(notif, 2)
+    end)
+    
+    updatePointList()
+end
 
-local currentImmortality = "v1"
+-- ============================================
+-- SISTEMA DE INMORTALIDAD
+-- ============================================
 local immortalEnabled = false
+local currentImmortality = "v1"
 local immortalConnections = {}
 
 local function clearImmortality()
@@ -338,9 +610,8 @@ local function clearImmortality()
     immortalConnections = {}
 end
 
--- MÉTODO V1
 local function startImmortalV1()
-    local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
     if not humanoid then return end
     local conn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
         if humanoid.Health <= 1 then
@@ -350,10 +621,9 @@ local function startImmortalV1()
     table.insert(immortalConnections, conn)
 end
 
--- MÉTODO V2
 local function startImmortalV2()
     local conn = game:GetService("RunService").Stepped:Connect(function()
-        local char = game.Players.LocalPlayer.Character
+        local char = player.Character
         if char and char:FindFirstChild("Humanoid") then
             local hum = char.Humanoid
             if hum.Health <= 1 then
@@ -369,9 +639,8 @@ local function startImmortalV2()
     table.insert(immortalConnections, conn)
 end
 
--- MÉTODO V3
 local function startImmortalV3()
-    local char = game.Players.LocalPlayer.Character
+    local char = player.Character
     if not char then return end
     
     local healthConn = char:FindFirstChild("Humanoid"):GetPropertyChangedSignal("Health"):Connect(function()
@@ -382,7 +651,7 @@ local function startImmortalV3()
     end)
     table.insert(immortalConnections, healthConn)
     
-    local damageConn = game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(newChar)
+    local damageConn = player.CharacterAdded:Connect(function(newChar)
         task.wait(0.5)
         local hum = newChar:FindFirstChild("Humanoid")
         if hum then
@@ -406,120 +675,81 @@ local function applyImmortality()
     elseif currentImmortality == "v3" then
         startImmortalV3()
     end
-    DiscordLib:Notification("Inmortalidad", "Modo " .. string.upper(currentImmortality) .. " activado", "OK")
 end
 
-local function setImmortalityMethod(method)
-    currentImmortality = method
-    if immortalEnabled then
+local function showImmortalPanel()
+    for _, child in pairs(contentContainer:GetChildren()) do
+        child:Destroy()
+    end
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -10, 0, 40)
+    titleLabel.Position = UDim2.new(0, 5, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "💀 INMORTALIDAD 💀"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 18
+    titleLabel.Parent = contentContainer
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(1, -10, 0, 45)
+    toggleBtn.Position = UDim2.new(0, 5, 0, 60)
+    toggleBtn.BackgroundColor3 = immortalEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+    toggleBtn.Text = immortalEnabled and "🔴 INMORTALIDAD ACTIVADA" or "🟢 ACTIVAR INMORTALIDAD"
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 16
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Parent = contentContainer
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        immortalEnabled = not immortalEnabled
+        toggleBtn.BackgroundColor3 = immortalEnabled and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
+        toggleBtn.Text = immortalEnabled and "🔴 INMORTALIDAD ACTIVADA" or "🟢 ACTIVAR INMORTALIDAD"
         applyImmortality()
-    end
-end
-
-TabGuiV1:Toggle("Inmortalidad (ON/OFF)", false, function(val)
-    immortalEnabled = val
-    if val then
-        applyImmortality()
-    else
-        clearImmortality()
-        DiscordLib:Notification("Inmortalidad", "Desactivada", "OK")
-    end
-end)
-
-local methodDropdown = TabGuiV1:Dropdown("Método de Inmortalidad", {"v1 - Auto-revive rápido", "v2 - Loop + Anti-caída", "v3 - Override total"}, function(value)
-    if value == "v1 - Auto-revive rápido" then
-        setImmortalityMethod("v1")
-    elseif value == "v2 - Loop + Anti-caída" then
-        setImmortalityMethod("v2")
-    elseif value == "v3 - Override total" then
-        setImmortalityMethod("v3")
-    end
-end)
-methodDropdown:Select("v1 - Auto-revive rápido")
-
--- ============================================
--- FUNCIONALIDADES ORIGINALES
--- ============================================
-TabGuiV1:Label("━━━━━━━━━━ CONFIGURACIÓN ━━━━━━━━━━")
-
-TabGuiV1:Textbox("WalkSpeed", "Velocidad (16 normal)", false, function(txt)
-    local speed = tonumber(txt)
-    if speed and game.Players.LocalPlayer.Character then
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
-    end
-end)
-
-TabGuiV1:Toggle("QuitarJumpPower", false, function(val)
-    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum then
-        hum.JumpPower = val and 0 or 50
-    end
-end)
-
-TabGuiV1:Button("Abrir Consola", function()
-    game:GetService("StarterGui"):SetCore("DevConsoleVisible", true)
-end)
-
-TabGuiV1:Colorpicker("Imprimir Color", Color3.fromRGB(255, 255, 255), function(color)
-    print("Color seleccionado:", color)
-end)
-
-TabGuiV1:Bind("Apretar tecla F", Enum.KeyCode.F, function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.Health = 0
-    end
-end)
-
-local slider = TabGuiV1:Slider("Cambio de Vida", 0, 100, 1, function(value)
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.Health = value
-    end
-end)
-
-local dropdown = TabGuiV1:Dropdown("Lista de Funciones", {
-    "Mensaje", "TabSeparador", "BorrarTodo", "CambiarSliderA50",
-    "AgregarFuncion", "HacerGrande", "HacerPequeño"
-}, function(value)
-    if value == "Mensaje" then
-        DiscordLib:Notification("NombreScript", "Información", "Continue")
-    elseif value == "AgregarFuncion" then
-        dropdown:Add("Bug")
-    elseif value == "Bug" then
-        local char = game.Players.LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 100, 0)
-        end
-    elseif value == "BorrarTodo" then
-        dropdown:Clear()
-    elseif value == "CambiarSliderA50" then
-        slider:Change(50)
-    elseif value == "TabSeparador" then
-        Tab1:Seperator()
-    elseif value == "HacerGrande" then
-        local char = game.Players.LocalPlayer.Character
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.Size = part.Size * 2
+    end)
+    
+    local methodLabel = Instance.new("TextLabel")
+    methodLabel.Size = UDim2.new(1, -10, 0, 25)
+    methodLabel.Position = UDim2.new(0, 5, 0, 115)
+    methodLabel.BackgroundTransparency = 1
+    methodLabel.Text = "🎮 MÉTODO DE INMORTALIDAD:"
+    methodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    methodLabel.Font = Enum.Font.GothamBold
+    methodLabel.TextSize = 12
+    methodLabel.TextXAlignment = Enum.TextXAlignment.Left
+    methodLabel.Parent = contentContainer
+    
+    local methods = {"v1 - Auto-revive rápido", "v2 - Loop + Anti-caída", "v3 - Override total"}
+    local yOffset = 145
+    for _, method in ipairs(methods) do
+        local methodBtn = Instance.new("TextButton")
+        methodBtn.Size = UDim2.new(1, -10, 0, 35)
+        methodBtn.Position = UDim2.new(0, 5, 0, yOffset)
+        methodBtn.BackgroundColor3 = currentImmortality == string.sub(method, 1, 2) and Color3.fromRGB(70, 70, 80) or Color3.fromRGB(45, 45, 50)
+        methodBtn.Text = method
+        methodBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        methodBtn.Font = Enum.Font.Gotham
+        methodBtn.TextSize = 14
+        methodBtn.BorderSizePixel = 0
+        methodBtn.Parent = contentContainer
+        
+        methodBtn.MouseButton1Click:Connect(function()
+            currentImmortality = string.sub(method, 1, 2)
+            for _, child in pairs(contentContainer:GetChildren()) do
+                if child:IsA("TextButton") and child.Text:find("v1 -") or child.Text:find("v2 -") or child.Text:find("v3 -") then
+                    child.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+                end
             end
-        end
-    elseif value == "HacerPequeño" then
-        local char = game.Players.LocalPlayer.Character
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.Size = part.Size / 2
+            methodBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+            if immortalEnabled then
+                applyImmortality()
             end
-        end
+        end)
+        
+        yOffset = yOffset + 40
     end
-end)
-
--- ============================================
--- INICIAR CARGA DE PUNTOS
--- ============================================
-loadAllPoints()
-toggleESP(true)
-
--- Mensaje de ayuda
-print("🔹 PUNTOS SYSTEM: Escribe un nombre en 'Nombre del punto' y presiona GUARDAR")
-print("🔹 El nombre se toma en el momento de guardar, no importa si se borra del campo")
+    
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size
