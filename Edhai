@@ -1,7 +1,9 @@
 --// TP HUB TERMINAL PARROT OS (SIN DATASTORE)
---// Drag PC + Celular + RGB + Minimizar + Lista + Guardar con Nombre
---// TP Instantáneo / TP Flotando + Velocidad
---// Toggle Auto TP al morir
+--// DRAG PC+CELULAR + RGB + MINIMIZAR + LISTA + GUARDAR CON NOMBRE
+--// TP INSTANTÁNEO / TP FLOTANDO + VELOCIDAD
+--// TOGGLE AUTO TP AL MORIR
+--// TP POR COORDENADAS + VER COORDENADAS
+--// HUB SCROLLABLE PARA CELULARES
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -34,13 +36,21 @@ gui.Name = "ParrotTPHub"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local main = Instance.new("Frame")
+--// MAIN SCROLLABLE
+local main = Instance.new("ScrollingFrame")
 main.Size = UDim2.new(0, 520, 0, 460)
 main.Position = UDim2.new(0.5, -260, 0.5, -230)
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 main.BorderSizePixel = 0
+main.ScrollBarThickness = 8
+main.CanvasSize = UDim2.new(0, 0, 0, 900)
 main.Parent = gui
 
+-- Para que no se buguee el scroll
+main.AutomaticCanvasSize = Enum.AutomaticSize.None
+main.ScrollingDirection = Enum.ScrollingDirection.Y
+
+-- Topbar
 local topbar = Instance.new("Frame")
 topbar.Size = UDim2.new(1, 0, 0, 35)
 topbar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -88,7 +98,7 @@ rgbLine.Parent = topbar
 
 -- Output terminal
 local output = Instance.new("TextLabel")
-output.Size = UDim2.new(1, -20, 0, 100)
+output.Size = UDim2.new(1, -20, 0, 120)
 output.Position = UDim2.new(0, 10, 0, 45)
 output.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 output.BorderSizePixel = 0
@@ -105,10 +115,10 @@ local function Print(msg)
 	output.Text = output.Text .. "\n" .. msg
 end
 
--- Input
+-- Input nombre punto
 local inputBox = Instance.new("TextBox")
 inputBox.Size = UDim2.new(1, -20, 0, 35)
-inputBox.Position = UDim2.new(0, 10, 0, 155)
+inputBox.Position = UDim2.new(0, 10, 0, 175)
 inputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 inputBox.BorderSizePixel = 0
 inputBox.TextColor3 = Color3.fromRGB(0, 255, 0)
@@ -122,7 +132,7 @@ inputBox.Parent = main
 -- Toggle muerte
 local toggleDeath = Instance.new("TextButton")
 toggleDeath.Size = UDim2.new(1, -20, 0, 30)
-toggleDeath.Position = UDim2.new(0, 10, 0, 200)
+toggleDeath.Position = UDim2.new(0, 10, 0, 220)
 toggleDeath.Text = "[ OFF ] Auto TP al morir"
 toggleDeath.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleDeath.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
@@ -134,7 +144,7 @@ toggleDeath.Parent = main
 -- Toggle smooth tp
 local toggleSmooth = Instance.new("TextButton")
 toggleSmooth.Size = UDim2.new(1, -20, 0, 30)
-toggleSmooth.Position = UDim2.new(0, 10, 0, 235)
+toggleSmooth.Position = UDim2.new(0, 10, 0, 255)
 toggleSmooth.Text = "[ OFF ] Modo TP Flotando"
 toggleSmooth.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleSmooth.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
@@ -146,7 +156,7 @@ toggleSmooth.Parent = main
 -- Velocidad input
 local speedBox = Instance.new("TextBox")
 speedBox.Size = UDim2.new(1, -20, 0, 30)
-speedBox.Position = UDim2.new(0, 10, 0, 270)
+speedBox.Position = UDim2.new(0, 10, 0, 290)
 speedBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 speedBox.BorderSizePixel = 0
 speedBox.TextColor3 = Color3.fromRGB(0, 255, 0)
@@ -157,10 +167,48 @@ speedBox.Text = ""
 speedBox.ClearTextOnFocus = false
 speedBox.Parent = main
 
+-- Coordenadas input
+local coordBox = Instance.new("TextBox")
+coordBox.Size = UDim2.new(1, -20, 0, 30)
+coordBox.Position = UDim2.new(0, 10, 0, 325)
+coordBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+coordBox.BorderSizePixel = 0
+coordBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+coordBox.Font = Enum.Font.Code
+coordBox.TextSize = 14
+coordBox.PlaceholderText = "Coordenadas X,Y,Z (ej: 100,20,-50)"
+coordBox.Text = ""
+coordBox.ClearTextOnFocus = false
+coordBox.Parent = main
+
+-- Botón ver coords
+local showCoordBtn = Instance.new("TextButton")
+showCoordBtn.Size = UDim2.new(0, 245, 0, 30)
+showCoordBtn.Position = UDim2.new(0, 10, 0, 360)
+showCoordBtn.Text = "Ver Coordenadas"
+showCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+showCoordBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+showCoordBtn.BorderSizePixel = 0
+showCoordBtn.Font = Enum.Font.Code
+showCoordBtn.TextSize = 14
+showCoordBtn.Parent = main
+
+-- Botón tp coords
+local tpCoordBtn = Instance.new("TextButton")
+tpCoordBtn.Size = UDim2.new(0, 245, 0, 30)
+tpCoordBtn.Position = UDim2.new(0, 265, 0, 360)
+tpCoordBtn.Text = "TP a Coordenadas"
+tpCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpCoordBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+tpCoordBtn.BorderSizePixel = 0
+tpCoordBtn.Font = Enum.Font.Code
+tpCoordBtn.TextSize = 14
+tpCoordBtn.Parent = main
+
 -- Lista puntos
 local listFrame = Instance.new("Frame")
-listFrame.Size = UDim2.new(1, -20, 0, 110)
-listFrame.Position = UDim2.new(0, 10, 0, 305)
+listFrame.Size = UDim2.new(1, -20, 0, 160)
+listFrame.Position = UDim2.new(0, 10, 0, 400)
 listFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 listFrame.BorderSizePixel = 0
 listFrame.Parent = main
@@ -191,7 +239,7 @@ layout.Padding = UDim.new(0, 3)
 -- Botones abajo
 local saveBtn = Instance.new("TextButton")
 saveBtn.Size = UDim2.new(0, 160, 0, 30)
-saveBtn.Position = UDim2.new(0, 10, 1, -35)
+saveBtn.Position = UDim2.new(0, 10, 0, 570)
 saveBtn.Text = "Guardar Punto"
 saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 saveBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
@@ -202,7 +250,7 @@ saveBtn.Parent = main
 
 local tpBtn = Instance.new("TextButton")
 tpBtn.Size = UDim2.new(0, 160, 0, 30)
-tpBtn.Position = UDim2.new(0, 180, 1, -35)
+tpBtn.Position = UDim2.new(0, 180, 0, 570)
 tpBtn.Text = "TP al Punto"
 tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
@@ -213,7 +261,7 @@ tpBtn.Parent = main
 
 local delBtn = Instance.new("TextButton")
 delBtn.Size = UDim2.new(0, 160, 0, 30)
-delBtn.Position = UDim2.new(0, 350, 1, -35)
+delBtn.Position = UDim2.new(0, 350, 0, 570)
 delBtn.Text = "Eliminar Punto"
 delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 delBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0)
@@ -272,10 +320,9 @@ local function SavePoint(name)
 	RefreshList()
 end
 
--- TP flotando (MEJORADO)
+-- TP flotando
 local function SmoothTeleport(targetCFrame)
 	local root = GetRoot()
-
 	root.Anchored = true
 
 	local startPos = root.Position
@@ -299,25 +346,51 @@ local function SmoothTeleport(targetCFrame)
 	root.Anchored = false
 end
 
--- TP punto
+local function TeleportToCFrame(targetCFrame)
+	if smoothMode then
+		SmoothTeleport(targetCFrame)
+	else
+		GetRoot().CFrame = targetCFrame
+	end
+end
+
 local function TeleportToPoint()
 	if not SelectedIndex or not Points[SelectedIndex] then
 		Print("ERROR: selecciona un punto.")
 		return
 	end
 
-	local target = Points[SelectedIndex].CFrame
-
-	if smoothMode then
-		Print("TP flotando -> " .. Points[SelectedIndex].Name)
-		SmoothTeleport(target)
-	else
-		Print("TP instantáneo -> " .. Points[SelectedIndex].Name)
-		GetRoot().CFrame = target
-	end
+	Print("TP -> " .. Points[SelectedIndex].Name)
+	TeleportToCFrame(Points[SelectedIndex].CFrame)
 end
 
--- Eliminar punto
+local function TeleportToCoords(text)
+	if not text or text == "" then
+		Print("ERROR: escribe X,Y,Z.")
+		return
+	end
+
+	text = text:gsub(" ", "")
+	local parts = string.split(text, ",")
+
+	if #parts < 3 then
+		Print("ERROR: formato incorrecto. Ej: 100,20,-50")
+		return
+	end
+
+	local x = tonumber(parts[1])
+	local y = tonumber(parts[2])
+	local z = tonumber(parts[3])
+
+	if not x or not y or not z then
+		Print("ERROR: coordenadas inválidas.")
+		return
+	end
+
+	Print("TP coordenadas -> (" .. x .. ", " .. y .. ", " .. z .. ")")
+	TeleportToCFrame(CFrame.new(x, y, z))
+end
+
 local function DeletePoint()
 	if not SelectedIndex or not Points[SelectedIndex] then
 		Print("ERROR: no hay punto seleccionado.")
@@ -343,16 +416,23 @@ delBtn.MouseButton1Click:Connect(function()
 	DeletePoint()
 end)
 
+showCoordBtn.MouseButton1Click:Connect(function()
+	local pos = GetRoot().Position
+	Print("Coords: X=" .. math.floor(pos.X) .. " Y=" .. math.floor(pos.Y) .. " Z=" .. math.floor(pos.Z))
+end)
+
+tpCoordBtn.MouseButton1Click:Connect(function()
+	TeleportToCoords(coordBox.Text)
+end)
+
 closeBtn.MouseButton1Click:Connect(function()
 	gui:Destroy()
 end)
 
--- Minimizar
 miniBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 
 	local visible = not minimized
-
 	output.Visible = visible
 	inputBox.Visible = visible
 	listFrame.Visible = visible
@@ -362,17 +442,21 @@ miniBtn.MouseButton1Click:Connect(function()
 	toggleDeath.Visible = visible
 	toggleSmooth.Visible = visible
 	speedBox.Visible = visible
+	coordBox.Visible = visible
+	showCoordBtn.Visible = visible
+	tpCoordBtn.Visible = visible
 
 	if minimized then
 		main.Size = UDim2.new(0, 520, 0, 35)
+		main.CanvasSize = UDim2.new(0, 0, 0, 35)
 		miniBtn.Text = "+"
 	else
 		main.Size = UDim2.new(0, 520, 0, 460)
+		main.CanvasSize = UDim2.new(0, 0, 0, 900)
 		miniBtn.Text = "-"
 	end
 end)
 
--- ENTER guardar
 inputBox.FocusLost:Connect(function(enterPressed)
 	if enterPressed then
 		SavePoint(inputBox.Text)
@@ -380,7 +464,6 @@ inputBox.FocusLost:Connect(function(enterPressed)
 	end
 end)
 
--- Toggle muerte
 toggleDeath.MouseButton1Click:Connect(function()
 	autoRespawnTP = not autoRespawnTP
 
@@ -395,7 +478,6 @@ toggleDeath.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Toggle smooth
 toggleSmooth.MouseButton1Click:Connect(function()
 	smoothMode = not smoothMode
 
@@ -410,16 +492,11 @@ toggleSmooth.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Speed input
 speedBox.FocusLost:Connect(function()
 	local num = tonumber(speedBox.Text)
 	if num and num >= 5 and num <= 500 then
 		smoothSpeed = num
 		Print("Velocidad TP Flotando -> " .. tostring(smoothSpeed))
-	else
-		if speedBox.Text ~= "" then
-			Print("ERROR: velocidad inválida (5 - 500).")
-		end
 	end
 end)
 
@@ -436,7 +513,6 @@ local function SetupCharacter(char)
 	end)
 end
 
--- Respawn
 player.CharacterAdded:Connect(function(char)
 	SetupCharacter(char)
 
@@ -444,7 +520,7 @@ player.CharacterAdded:Connect(function(char)
 
 	if autoRespawnTP and lastDeathCFrame then
 		char:WaitForChild("HumanoidRootPart").CFrame = lastDeathCFrame
-		Print("TP automático al lugar de muerte completado.")
+		Print("TP automático completado.")
 	end
 end)
 
@@ -452,7 +528,7 @@ if player.Character then
 	SetupCharacter(player.Character)
 end
 
--- DRAG PC + CELULAR (Touch)
+-- DRAG PC + CELULAR
 local dragging = false
 local dragStart
 local startPos
@@ -467,13 +543,13 @@ local function EndDrag()
 	dragging = false
 end
 
-main.InputBegan:Connect(function(input)
+topbar.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		StartDrag(input)
 	end
 end)
 
-main.InputEnded:Connect(function(input)
+topbar.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		EndDrag()
 	end
@@ -502,4 +578,5 @@ end)
 Print("Sistema iniciado.")
 Print("ENTER para guardar puntos.")
 Print("Modo TP flotando disponible.")
+Print("TP por coordenadas disponible.")
 RefreshList()
