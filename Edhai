@@ -14,10 +14,7 @@ local pointsFolder = "Menu_Points"
 local currentSelectedPoint = nil
 local espEnabled = true
 local espObjects = {}
-
--- Variable para guardar el nombre temporalmente
 local pendingPointName = ""
-local pendingPointColor = Color3.new(1, 0, 0)
 
 -- Crear carpeta si no existe
 if not isfolder(pointsFolder) then
@@ -36,12 +33,9 @@ local function saveAllPoints()
             g = data.color.g,
             b = data.color.b
         }
-        local success, err = pcall(function()
+        pcall(function()
             writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
         end)
-        if not success then
-            warn("Error guardando " .. name .. ": " .. tostring(err))
-        end
     end
     DiscordLib:Notification("Puntos", "Puntos guardados", "OK")
 end
@@ -64,16 +58,15 @@ local function loadAllPoints()
             end
         end
     end
-    updatePointsList()
+    refreshPointsDropdown()  -- Actualizar dropdown
     if espEnabled then updateESP() end
     return #files
 end
 
 -- Guardar punto actual
 local function saveCurrentPoint()
-    local name = pendingPointName
-    if not name or name == "" then
-        DiscordLib:Notification("Error", "Ingresa un nombre primero", "OK")
+    if pendingPointName == "" then
+        DiscordLib:Notification("Error", "Escribe un nombre primero", "OK")
         return
     end
     local char = game.Players.LocalPlayer.Character
@@ -81,14 +74,14 @@ local function saveCurrentPoint()
         DiscordLib:Notification("Error", "Personaje no disponible", "OK")
         return
     end
-    points[name] = {
+    points[pendingPointName] = {
         cframe = char.HumanoidRootPart.CFrame,
         color = pendingPointColor
     }
     saveAllPoints()
-    updatePointsList()
+    refreshPointsDropdown()
     if espEnabled then updateESP() end
-    DiscordLib:Notification("Punto guardado", name, "OK")
+    DiscordLib:Notification("Punto guardado", pendingPointName, "OK")
 end
 
 -- Cargar punto
@@ -110,10 +103,11 @@ local function deletePoint(name)
     if points[name] then
         points[name] = nil
         local filePath = pointsFolder .. "/" .. name .. ".json"
-        if isfile(filePath) then delfile(filePath) end
-        updatePointsList()
+        pcall(function() delfile(filePath) end)
+        refreshPointsDropdown()
         if espEnabled then updateESP() end
         DiscordLib:Notification("Punto eliminado", name, "OK")
+        if currentSelectedPoint == name then currentSelectedPoint = nil end
     end
 end
 
@@ -130,29 +124,49 @@ local function editPointName(oldName, newName)
     points[newName] = points[oldName]
     points[oldName] = nil
     local oldPath = pointsFolder .. "/" .. oldName .. ".json"
-    if isfile(oldPath) then delfile(oldPath) end
+    pcall(function() delfile(oldPath) end)
     saveAllPoints()
-    updatePointsList()
+    refreshPointsDropdown()
     if espEnabled then updateESP() end
     DiscordLib:Notification("Punto renombrado", oldName .. " → " .. newName, "OK")
+    if currentSelectedPoint == oldName then currentSelectedPoint = newName end
 end
 
--- Actualizar lista del dropdown
+-- ============================================
+-- DROPDOWN DINÁMICO (RECREAR CADA VEZ)
+-- ============================================
 local pointsDropdown = nil
-local function updatePointsList()
+local dropdownContainer = nil
+
+local function refreshPointsDropdown()
+    -- Si ya existe el dropdown, destruirlo y recrearlo
     if pointsDropdown then
-        local pointNames = {}
-        for name, _ in pairs(points) do table.insert(pointNames, name) end
-        table.sort(pointNames)
-        pointsDropdown:Clear()
-        if #pointNames == 0 then
-            pointsDropdown:Add("(No hay puntos)")
-        else
-            for _, name in ipairs(pointNames) do
-                pointsDropdown:Add(name)
+        -- Buscar el contenedor padre y eliminar el dropdown viejo
+        -- La librería no tiene método remove, así que recreamos desde el elemento padre
+        local success = pcall(function()
+            -- Intentamos acceder al elemento de la interfaz
+            if pointsDropdown and pointsDropdown.Remove then
+                pointsDropdown:Remove()
             end
-        end
+        end)
     end
+    
+    -- Crear nueva lista de opciones
+    local options = {}
+    for name, _ in pairs(points) do
+        table.insert(options, name)
+    end
+    table.sort(options)
+    if #options == 0 then
+        table.insert(options, "(No hay puntos)")
+    end
+    
+    -- Crear nuevo dropdown
+    pointsDropdown = TabGuiV1:Dropdown("Puntos guardados", options, function(value)
+        if value ~= "(No hay puntos)" then
+            currentSelectedPoint = value
+        end
+    end)
 end
 
 -- ============================================
@@ -223,16 +237,17 @@ local function toggleESP(state)
 end
 
 -- ============================================
--- INTERFAZ DE PUNTOS (CORREGIDA)
+-- INTERFAZ DE PUNTOS
 -- ============================================
 TabGuiV1:Label("━━━━━━━━━━ PUNTOS SYSTEM ━━━━━━━━━━")
 
--- Textbox para nombre (con callback que guarda en variable)
+-- Textbox para nombre
 TabGuiV1:Textbox("Nombre del punto", "Ej: casa, boss", true, function(txt)
     pendingPointName = txt
 end)
 
--- Selector de color
+-- Color por defecto
+local pendingPointColor = Color3.new(1, 0, 0)
 TabGuiV1:Colorpicker("Color del punto", pendingPointColor, function(color)
     pendingPointColor = color
 end)
@@ -242,19 +257,15 @@ TabGuiV1:Button("💾 Guardar punto actual", function()
     saveCurrentPoint()
 end)
 
--- Dropdown de puntos
-pointsDropdown = TabGuiV1:Dropdown("Puntos guardados", {"(Cargando...)"}, function(value)
-    if value ~= "(No hay puntos)" then
-        currentSelectedPoint = value
-    end
-end)
+-- El dropdown se creará con refreshPointsDropdown()
+refreshPointsDropdown()
 
 -- Botón cargar
 TabGuiV1:Button("📍 Cargar punto seleccionado", function()
     if currentSelectedPoint and points[currentSelectedPoint] then
         loadPoint(currentSelectedPoint)
     else
-        DiscordLib:Notification("Error", "Selecciona un punto", "OK")
+        DiscordLib:Notification("Error", "Selecciona un punto de la lista", "OK")
     end
 end)
 
@@ -264,15 +275,22 @@ TabGuiV1:Button("🗑️ Eliminar punto seleccionado", function()
         deletePoint(currentSelectedPoint)
         currentSelectedPoint = nil
     else
-        DiscordLib:Notification("Error", "Selecciona un punto", "OK")
+        DiscordLib:Notification("Error", "Selecciona un punto de la lista", "OK")
     end
 end)
 
 -- Textbox para renombrar
+local renameInput = ""
 TabGuiV1:Textbox("Nuevo nombre", "Para renombrar", true, function(newName)
-    if currentSelectedPoint and points[currentSelectedPoint] and newName and newName ~= "" then
-        editPointName(currentSelectedPoint, newName)
-        currentSelectedPoint = newName
+    renameInput = newName
+end)
+
+TabGuiV1:Button("✏️ Renombrar punto seleccionado", function()
+    if currentSelectedPoint and points[currentSelectedPoint] and renameInput ~= "" then
+        editPointName(currentSelectedPoint, renameInput)
+        renameInput = ""
+    else
+        DiscordLib:Notification("Error", "Selecciona un punto y escribe un nuevo nombre", "OK")
     end
 end)
 
@@ -303,11 +321,10 @@ local function clearImmortality()
     immortalConnections = {}
 end
 
--- MÉTODO V1: Auto-revive rápido
+-- MÉTODO V1
 local function startImmortalV1()
     local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
     if not humanoid then return end
-    
     local conn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
         if humanoid.Health <= 1 then
             humanoid.Health = humanoid.MaxHealth
@@ -316,7 +333,7 @@ local function startImmortalV1()
     table.insert(immortalConnections, conn)
 end
 
--- MÉTODO V2: Loop constante + anti-caída
+-- MÉTODO V2
 local function startImmortalV2()
     local conn = game:GetService("RunService").Stepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
@@ -335,7 +352,7 @@ local function startImmortalV2()
     table.insert(immortalConnections, conn)
 end
 
--- MÉTODO V3: Override total + reconexión
+-- MÉTODO V3
 local function startImmortalV3()
     local char = game.Players.LocalPlayer.Character
     if not char then return end
@@ -365,7 +382,6 @@ end
 local function applyImmortality()
     clearImmortality()
     if not immortalEnabled then return end
-    
     if currentImmortality == "v1" then
         startImmortalV1()
     elseif currentImmortality == "v2" then
@@ -381,10 +397,8 @@ local function setImmortalityMethod(method)
     if immortalEnabled then
         applyImmortality()
     end
-    DiscordLib:Notification("Inmortalidad", "Método cambiado a: " .. string.upper(method), "OK")
 end
 
--- Toggle principal
 TabGuiV1:Toggle("Inmortalidad (ON/OFF)", false, function(val)
     immortalEnabled = val
     if val then
@@ -395,7 +409,6 @@ TabGuiV1:Toggle("Inmortalidad (ON/OFF)", false, function(val)
     end
 end)
 
--- Dropdown métodos
 local methodDropdown = TabGuiV1:Dropdown("Método de Inmortalidad", {"v1 - Auto-revive rápido", "v2 - Loop + Anti-caída", "v3 - Override total"}, function(value)
     if value == "v1 - Auto-revive rápido" then
         setImmortalityMethod("v1")
@@ -422,11 +435,7 @@ end)
 TabGuiV1:Toggle("QuitarJumpPower", false, function(val)
     local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
     if hum then
-        if val then
-            hum.JumpPower = 0
-        else
-            hum.JumpPower = 50
-        end
+        hum.JumpPower = val and 0 or 50
     end
 end)
 
@@ -489,7 +498,7 @@ local dropdown = TabGuiV1:Dropdown("Lista de Funciones", {
 end)
 
 -- ============================================
--- INICIAR CARGA DE PUNTOS Y ESP
+-- INICIAR CARGA DE PUNTOS
 -- ============================================
 loadAllPoints()
 toggleESP(true)
