@@ -1,7 +1,8 @@
---// TP HUB TERMINAL PARROT OS (SIN DATASTORE)
---// Drag + RGB + Minimizar + Lista + Guardar con Nombre
+--// TP HUB TERMINAL PARROT OS (FULL)
+--// Drag Full + RGB + Minimizar + Lista + Guardar con Nombre
 --// TP Instantáneo / TP Flotando + Velocidad
 --// Toggle Auto TP al morir
+--// WalkSpeed + JumpPower Editor
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,22 +15,29 @@ local Points = {}
 local SelectedIndex = nil
 local minimized = false
 
--- Toggle auto tp muerte
+-- Auto TP muerte
 local autoRespawnTP = false
 local lastDeathCFrame = nil
 
 -- Smooth TP
 local smoothMode = false
-local smoothSpeed = 60 -- studs/seg
+local smoothSpeed = 60
+
+-- Valores jugador
+local customSpeed = 16
+local customJump = 50
 
 --// Funciones
-local function GetRoot()
-	local char = player.Character or player.CharacterAdded:Wait()
-	return char:WaitForChild("HumanoidRootPart")
+local function GetChar()
+	return player.Character or player.CharacterAdded:Wait()
 end
 
-local function Print(msg)
-	output.Text = output.Text .. "\n" .. msg
+local function GetHumanoid()
+	return GetChar():WaitForChild("Humanoid")
+end
+
+local function GetRoot()
+	return GetChar():WaitForChild("HumanoidRootPart")
 end
 
 --// GUI
@@ -39,8 +47,8 @@ gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 520, 0, 460)
-main.Position = UDim2.new(0.5, -260, 0.5, -230)
+main.Size = UDim2.new(0, 520, 0, 520)
+main.Position = UDim2.new(0.5, -260, 0.5, -260)
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 main.BorderSizePixel = 0
 main.Parent = gui
@@ -105,7 +113,11 @@ output.TextWrapped = true
 output.Text = "Bienvenido al TP Hub.\n"
 output.Parent = main
 
--- Input
+local function Print(msg)
+	output.Text = output.Text .. "\n" .. msg
+end
+
+-- Input nombre punto
 local inputBox = Instance.new("TextBox")
 inputBox.Size = UDim2.new(1, -20, 0, 35)
 inputBox.Position = UDim2.new(0, 10, 0, 155)
@@ -143,7 +155,7 @@ toggleSmooth.Font = Enum.Font.Code
 toggleSmooth.TextSize = 14
 toggleSmooth.Parent = main
 
--- Velocidad input
+-- Velocidad TP flotando
 local speedBox = Instance.new("TextBox")
 speedBox.Size = UDim2.new(1, -20, 0, 30)
 speedBox.Position = UDim2.new(0, 10, 0, 270)
@@ -157,10 +169,38 @@ speedBox.Text = ""
 speedBox.ClearTextOnFocus = false
 speedBox.Parent = main
 
+-- WalkSpeed box
+local wsBox = Instance.new("TextBox")
+wsBox.Size = UDim2.new(1, -20, 0, 30)
+wsBox.Position = UDim2.new(0, 10, 0, 305)
+wsBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+wsBox.BorderSizePixel = 0
+wsBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+wsBox.Font = Enum.Font.Code
+wsBox.TextSize = 14
+wsBox.PlaceholderText = "WalkSpeed (default 16)"
+wsBox.Text = ""
+wsBox.ClearTextOnFocus = false
+wsBox.Parent = main
+
+-- JumpPower box
+local jpBox = Instance.new("TextBox")
+jpBox.Size = UDim2.new(1, -20, 0, 30)
+jpBox.Position = UDim2.new(0, 10, 0, 340)
+jpBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+jpBox.BorderSizePixel = 0
+jpBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+jpBox.Font = Enum.Font.Code
+jpBox.TextSize = 14
+jpBox.PlaceholderText = "JumpPower (default 50)"
+jpBox.Text = ""
+jpBox.ClearTextOnFocus = false
+jpBox.Parent = main
+
 -- Lista puntos
 local listFrame = Instance.new("Frame")
 listFrame.Size = UDim2.new(1, -20, 0, 110)
-listFrame.Position = UDim2.new(0, 10, 0, 305)
+listFrame.Position = UDim2.new(0, 10, 0, 375)
 listFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 listFrame.BorderSizePixel = 0
 listFrame.Parent = main
@@ -223,11 +263,6 @@ delBtn.Font = Enum.Font.Code
 delBtn.TextSize = 14
 delBtn.Parent = main
 
--- Print func ahora que output existe
-local function Print(msg)
-	output.Text = output.Text .. "\n" .. msg
-end
-
 -- Refrescar lista
 local function RefreshList()
 	for _, v in pairs(scroll:GetChildren()) do
@@ -288,7 +323,7 @@ local function SmoothTeleport(targetCFrame)
 	local duration = distance / smoothSpeed
 
 	if duration < 0.05 then duration = 0.05 end
-	if duration > 5 then duration = 5 end
+	if duration > 6 then duration = 6 end
 
 	local startTime = tick()
 	while tick() - startTime < duration do
@@ -332,7 +367,14 @@ local function DeletePoint()
 	RefreshList()
 end
 
--- Eventos botones
+-- Aplicar stats
+local function ApplyStats()
+	local hum = GetHumanoid()
+	hum.WalkSpeed = customSpeed
+	hum.JumpPower = customJump
+end
+
+-- Eventos
 saveBtn.MouseButton1Click:Connect(function()
 	SavePoint(inputBox.Text)
 end)
@@ -352,31 +394,25 @@ end)
 miniBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 
-	if minimized then
-		output.Visible = false
-		inputBox.Visible = false
-		listFrame.Visible = false
-		saveBtn.Visible = false
-		tpBtn.Visible = false
-		delBtn.Visible = false
-		toggleDeath.Visible = false
-		toggleSmooth.Visible = false
-		speedBox.Visible = false
+	local visible = not minimized
 
+	output.Visible = visible
+	inputBox.Visible = visible
+	listFrame.Visible = visible
+	saveBtn.Visible = visible
+	tpBtn.Visible = visible
+	delBtn.Visible = visible
+	toggleDeath.Visible = visible
+	toggleSmooth.Visible = visible
+	speedBox.Visible = visible
+	wsBox.Visible = visible
+	jpBox.Visible = visible
+
+	if minimized then
 		main.Size = UDim2.new(0, 520, 0, 35)
 		miniBtn.Text = "+"
 	else
-		output.Visible = true
-		inputBox.Visible = true
-		listFrame.Visible = true
-		saveBtn.Visible = true
-		tpBtn.Visible = true
-		delBtn.Visible = true
-		toggleDeath.Visible = true
-		toggleSmooth.Visible = true
-		speedBox.Visible = true
-
-		main.Size = UDim2.new(0, 520, 0, 460)
+		main.Size = UDim2.new(0, 520, 0, 520)
 		miniBtn.Text = "-"
 	end
 end)
@@ -419,14 +455,44 @@ toggleSmooth.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Speed input
-speedBox.FocusLost:Connect(function(enterPressed)
+-- Speed TP flotando
+speedBox.FocusLost:Connect(function()
 	local num = tonumber(speedBox.Text)
-	if num and num > 5 and num <= 500 then
+	if num and num >= 5 and num <= 500 then
 		smoothSpeed = num
 		Print("Velocidad TP Flotando -> " .. tostring(smoothSpeed))
 	else
-		Print("ERROR: velocidad inválida (5 - 500).")
+		if speedBox.Text ~= "" then
+			Print("ERROR: velocidad inválida (5 - 500).")
+		end
+	end
+end)
+
+-- WalkSpeed
+wsBox.FocusLost:Connect(function()
+	local num = tonumber(wsBox.Text)
+	if num and num >= 1 and num <= 300 then
+		customSpeed = num
+		ApplyStats()
+		Print("WalkSpeed -> " .. tostring(customSpeed))
+	else
+		if wsBox.Text ~= "" then
+			Print("ERROR: WalkSpeed inválido (1 - 300).")
+		end
+	end
+end)
+
+-- JumpPower
+jpBox.FocusLost:Connect(function()
+	local num = tonumber(jpBox.Text)
+	if num and num >= 10 and num <= 500 then
+		customJump = num
+		ApplyStats()
+		Print("JumpPower -> " .. tostring(customJump))
+	else
+		if jpBox.Text ~= "" then
+			Print("ERROR: JumpPower inválido (10 - 500).")
+		end
 	end
 end)
 
@@ -434,6 +500,8 @@ end)
 local function SetupCharacter(char)
 	local humanoid = char:WaitForChild("Humanoid")
 	local root = char:WaitForChild("HumanoidRootPart")
+
+	ApplyStats()
 
 	humanoid.Died:Connect(function()
 		if autoRespawnTP then
@@ -459,12 +527,12 @@ if player.Character then
 	SetupCharacter(player.Character)
 end
 
--- DRAG
+-- DRAG FULL (cualquier parte)
 local dragging = false
 local dragStart
 local startPos
 
-topbar.InputBegan:Connect(function(input)
+main.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true
 		dragStart = input.Position
@@ -472,7 +540,7 @@ topbar.InputBegan:Connect(function(input)
 	end
 end)
 
-topbar.InputEnded:Connect(function(input)
+main.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = false
 	end
@@ -498,7 +566,9 @@ RunService.RenderStepped:Connect(function()
 	rgbLine.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
 end)
 
+-- Inicio
 Print("Sistema iniciado.")
 Print("ENTER para guardar puntos.")
 Print("Modo TP flotando disponible.")
+Print("Puedes cambiar WalkSpeed y JumpPower.")
 RefreshList()
