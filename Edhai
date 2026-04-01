@@ -1,67 +1,68 @@
---// TP HUB TERMINAL PARROT OS (SIN DATASTORE)
---// DRAG PC+CELULAR + RGB + MINIMIZAR + LISTA + GUARDAR CON NOMBRE
---// TP INSTANTÁNEO / TP FLOTANDO + VELOCIDAD
---// TOGGLE AUTO TP AL MORIR
---// TP POR COORDENADAS + VER COORDENADAS
---// HUB SCROLLABLE PARA CELULARES
+--[[
+    HUB COMPLETO - TP + INMORTALIDAD + DESYNC + TELEGUIADO + SPEED + 3RD FLOOR
+    Sistema unificado con botón flotante "Lipe"
+]]
 
+-- ============================================
+-- CREAR GUI CON BOTÓN FLOTANTE "LIPE"
+-- ============================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
+-- ScreenGui principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LipeHub"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
---// Datos
-local Points = {}
-local SelectedIndex = nil
-local minimized = false
+-- ============================================
+-- BOTÓN FLOTANTE "LIPE"
+-- ============================================
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 60, 0, 60)
+toggleButton.Position = UDim2.new(0, 20, 0.5, -30)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.BackgroundTransparency = 0.3
+toggleButton.Text = "Lipe"
+toggleButton.Font = Enum.Font.Arcade
+toggleButton.TextSize = 16
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Active = true
+toggleButton.Draggable = true
+toggleButton.Parent = screenGui
 
--- Toggle auto tp muerte
-local autoRespawnTP = false
-local lastDeathCFrame = nil
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(1, 0)
+uiCorner.Parent = toggleButton
 
--- Smooth TP
-local smoothMode = false
-local smoothSpeed = 60 -- studs/seg
-
---// Funciones
-local function GetRoot()
-	local char = player.Character or player.CharacterAdded:Wait()
-	return char:WaitForChild("HumanoidRootPart")
-end
-
---// GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "ParrotTPHub"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
---// MAIN SCROLLABLE
-local main = Instance.new("ScrollingFrame")
-main.Size = UDim2.new(0, 520, 0, 460)
-main.Position = UDim2.new(0.5, -260, 0.5, -230)
-main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-main.BorderSizePixel = 0
-main.ScrollBarThickness = 8
-main.CanvasSize = UDim2.new(0, 0, 0, 900)
-main.Parent = gui
-
--- Para que no se buguee el scroll
-main.AutomaticCanvasSize = Enum.AutomaticSize.None
-main.ScrollingDirection = Enum.ScrollingDirection.Y
+-- ============================================
+-- HUB PRINCIPAL (estilo terminal)
+-- ============================================
+local mainFrame = Instance.new("ScrollingFrame")
+mainFrame.Size = UDim2.new(0, 520, 0, 560)
+mainFrame.Position = UDim2.new(0.5, -260, 0.5, -280)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+mainFrame.BorderSizePixel = 0
+mainFrame.ScrollBarThickness = 8
+mainFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
 
 -- Topbar
 local topbar = Instance.new("Frame")
 topbar.Size = UDim2.new(1, 0, 0, 35)
 topbar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 topbar.BorderSizePixel = 0
-topbar.Parent = main
+topbar.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -120, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "root@parrot:~# TP-HUB"
+title.Text = "root@lipe:~# HUB PRO"
 title.TextColor3 = Color3.fromRGB(0, 255, 0)
 title.Font = Enum.Font.Code
 title.TextSize = 16
@@ -98,79 +99,518 @@ rgbLine.Parent = topbar
 
 -- Output terminal
 local output = Instance.new("TextLabel")
-output.Size = UDim2.new(1, -20, 0, 120)
+output.Size = UDim2.new(1, -20, 0, 80)
 output.Position = UDim2.new(0, 10, 0, 45)
 output.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 output.BorderSizePixel = 0
 output.TextColor3 = Color3.fromRGB(0, 255, 0)
 output.Font = Enum.Font.Code
-output.TextSize = 14
+output.TextSize = 12
 output.TextXAlignment = Enum.TextXAlignment.Left
 output.TextYAlignment = Enum.TextYAlignment.Top
 output.TextWrapped = true
-output.Text = "Bienvenido al TP Hub.\n"
-output.Parent = main
+output.Text = "Bienvenido al Hub Pro.\n"
+output.Parent = mainFrame
 
 local function Print(msg)
-	output.Text = output.Text .. "\n" .. msg
+    output.Text = output.Text .. "\n" .. msg
 end
 
--- Input nombre punto
-local inputBox = Instance.new("TextBox")
-inputBox.Size = UDim2.new(1, -20, 0, 35)
-inputBox.Position = UDim2.new(0, 10, 0, 175)
-inputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-inputBox.BorderSizePixel = 0
-inputBox.TextColor3 = Color3.fromRGB(0, 255, 0)
-inputBox.Font = Enum.Font.Code
-inputBox.TextSize = 16
-inputBox.PlaceholderText = "Nombre del punto y ENTER..."
-inputBox.Text = ""
-inputBox.ClearTextOnFocus = false
-inputBox.Parent = main
+-- ============================================
+-- SISTEMA DE PUNTOS TP
+-- ============================================
+local points = {}
+local pointsFolder = "LipeHub_Points"
+local selectedPoint = nil
+local espEnabled = true
+local espObjects = {}
+local smoothMode = false
+local smoothSpeed = 60
 
--- Toggle muerte
-local toggleDeath = Instance.new("TextButton")
-toggleDeath.Size = UDim2.new(1, -20, 0, 30)
-toggleDeath.Position = UDim2.new(0, 10, 0, 220)
-toggleDeath.Text = "[ OFF ] Auto TP al morir"
-toggleDeath.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleDeath.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-toggleDeath.BorderSizePixel = 0
-toggleDeath.Font = Enum.Font.Code
-toggleDeath.TextSize = 14
-toggleDeath.Parent = main
+if not isfolder(pointsFolder) then
+    makefolder(pointsFolder)
+end
 
--- Toggle smooth tp
-local toggleSmooth = Instance.new("TextButton")
-toggleSmooth.Size = UDim2.new(1, -20, 0, 30)
-toggleSmooth.Position = UDim2.new(0, 10, 0, 255)
-toggleSmooth.Text = "[ OFF ] Modo TP Flotando"
-toggleSmooth.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleSmooth.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-toggleSmooth.BorderSizePixel = 0
-toggleSmooth.Font = Enum.Font.Code
-toggleSmooth.TextSize = 14
-toggleSmooth.Parent = main
+local function savePoints()
+    for name, data in pairs(points) do
+        local saveData = {
+            x = data.cframe.X,
+            y = data.cframe.Y,
+            z = data.cframe.Z,
+            r = data.color.r,
+            g = data.color.g,
+            b = data.color.b
+        }
+        pcall(function()
+            writefile(pointsFolder .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(saveData))
+        end)
+    end
+end
 
--- Velocidad input
-local speedBox = Instance.new("TextBox")
-speedBox.Size = UDim2.new(1, -20, 0, 30)
-speedBox.Position = UDim2.new(0, 10, 0, 290)
-speedBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-speedBox.BorderSizePixel = 0
-speedBox.TextColor3 = Color3.fromRGB(0, 255, 0)
-speedBox.Font = Enum.Font.Code
-speedBox.TextSize = 14
-speedBox.PlaceholderText = "Velocidad TP Flotando (default 60)"
-speedBox.Text = ""
-speedBox.ClearTextOnFocus = false
-speedBox.Parent = main
+local function loadPoints()
+    points = {}
+    local files = listfiles(pointsFolder)
+    for _, file in ipairs(files) do
+        if file:match("%.json$") then
+            local content = readfile(file)
+            local data = game:GetService("HttpService"):JSONDecode(content)
+            local name = file:match("([^/]+)%.json$")
+            points[name] = {
+                cframe = CFrame.new(data.x, data.y, data.z),
+                color = Color3.new(data.r or 1, data.g or 0, data.b or 0)
+            }
+        end
+    end
+end
 
--- Coordenadas input
+local function GetRoot()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
+end
+
+local function SmoothTeleport(targetCFrame)
+    local root = GetRoot()
+    root.Anchored = true
+    local startPos = root.Position
+    local endPos = targetCFrame.Position
+    local distance = (endPos - startPos).Magnitude
+    local duration = math.clamp(distance / smoothSpeed, 0.1, 8)
+    local startTime = tick()
+    while tick() - startTime < duration do
+        local alpha = (tick() - startTime) / duration
+        local newPos = startPos:Lerp(endPos, alpha)
+        root.CFrame = CFrame.new(newPos) * (targetCFrame - targetCFrame.Position)
+        RunService.RenderStepped:Wait()
+    end
+    root.CFrame = targetCFrame
+    root.Anchored = false
+end
+
+local function TeleportToCFrame(targetCFrame)
+    if smoothMode then
+        SmoothTeleport(targetCFrame)
+    else
+        GetRoot().CFrame = targetCFrame
+    end
+end
+
+-- ESP Visual
+local function updateESP()
+    for _, objs in pairs(espObjects) do
+        pcall(function()
+            if objs.billboard then objs.billboard:Destroy() end
+            if objs.part then objs.part:Destroy() end
+        end)
+    end
+    espObjects = {}
+    if not espEnabled then return end
+    for name, point in pairs(points) do
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_" .. name
+        billboard.Size = UDim2.new(0, 150, 0, 35)
+        billboard.StudsOffset = Vector3.new(0, 2, 0)
+        billboard.AlwaysOnTop = true
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundColor3 = point.color
+        frame.BackgroundTransparency = 0.4
+        frame.BorderSizePixel = 1
+        frame.BorderColor3 = Color3.new(1, 1, 1)
+        frame.Parent = billboard
+        local text = Instance.new("TextLabel")
+        text.Size = UDim2.new(1, 0, 1, 0)
+        text.BackgroundTransparency = 1
+        text.Text = name
+        text.TextColor3 = Color3.new(1, 1, 1)
+        text.TextScaled = true
+        text.Font = Enum.Font.GothamBold
+        text.Parent = frame
+        local part = Instance.new("Part")
+        part.Name = "ESPPart_" .. name
+        part.Size = Vector3.new(0.5, 0.5, 0.5)
+        part.Anchored = true
+        part.CanCollide = false
+        part.Transparency = 1
+        part.Position = point.cframe.Position
+        part.Parent = workspace
+        billboard.Adornee = part
+        espObjects[name] = {billboard = billboard, part = part}
+    end
+end
+
+local function refreshPointList()
+    local container = scrollPoints
+    if not container then return end
+    for _, child in pairs(container:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local pointNames = {}
+    for name, _ in pairs(points) do table.insert(pointNames, name) end
+    table.sort(pointNames)
+    for _, name in ipairs(pointNames) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -5, 0, 22)
+        btn.BackgroundColor3 = (selectedPoint == name) and Color3.fromRGB(40, 40, 50) or Color3.fromRGB(20, 20, 20)
+        btn.BorderSizePixel = 0
+        btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+        btn.Font = Enum.Font.Code
+        btn.TextSize = 12
+        btn.Text = "📍 " .. name
+        btn.Parent = container
+        btn.MouseButton1Click:Connect(function()
+            selectedPoint = name
+            refreshPointList()
+            Print("Seleccionado: " .. name)
+        end)
+    end
+    if #pointNames == 0 then
+        local empty = Instance.new("TextLabel")
+        empty.Size = UDim2.new(1, -5, 0, 22)
+        empty.BackgroundTransparency = 1
+        empty.Text = "   (No hay puntos)"
+        empty.TextColor3 = Color3.fromRGB(100, 100, 100)
+        empty.Font = Enum.Font.Code
+        empty.TextSize = 12
+        empty.TextXAlignment = Enum.TextXAlignment.Left
+        empty.Parent = container
+    end
+end
+
+local function savePoint(name, color)
+    if name == "" then return false, "Escribe un nombre" end
+    local root = GetRoot()
+    points[name] = {cframe = root.CFrame, color = color or Color3.new(1, 0, 0)}
+    savePoints()
+    updateESP()
+    refreshPointList()
+    return true, "Punto guardado: " .. name
+end
+
+local function loadPoint(name)
+    local point = points[name]
+    if not point then return false, "Punto no encontrado" end
+    TeleportToCFrame(point.cframe)
+    return true, "TP a: " .. name
+end
+
+local function deletePoint(name)
+    if points[name] then
+        points[name] = nil
+        local filePath = pointsFolder .. "/" .. name .. ".json"
+        pcall(function() delfile(filePath) end)
+        savePoints()
+        updateESP()
+        refreshPointList()
+        if selectedPoint == name then selectedPoint = nil end
+        return true, "Eliminado: " .. name
+    end
+    return false, "Punto no encontrado"
+end
+
+-- ============================================
+-- SISTEMA DE INMORTALIDAD
+-- ============================================
+local immortalEnabled = false
+local currentImmortality = "v1"
+local immortalConnections = {}
+
+local function clearImmortality()
+    for _, conn in ipairs(immortalConnections) do
+        pcall(function() if conn and conn.Disconnect then conn:Disconnect() end end)
+    end
+    immortalConnections = {}
+end
+
+local function startImmortalV1()
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not humanoid then return end
+    local conn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if humanoid.Health <= 1 then humanoid.Health = humanoid.MaxHealth end
+    end)
+    table.insert(immortalConnections, conn)
+end
+
+local function startImmortalV2()
+    local conn = RunService.Stepped:Connect(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            local hum = char.Humanoid
+            if hum.Health <= 1 then hum.Health = hum.MaxHealth end
+            if hum.PlatformStand == false then
+                hum.PlatformStand = true
+                task.wait(0.1)
+                hum.PlatformStand = false
+            end
+        end
+    end)
+    table.insert(immortalConnections, conn)
+end
+
+local function startImmortalV3()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local healthConn = char:FindFirstChild("Humanoid"):GetPropertyChangedSignal("Health"):Connect(function()
+        local hum = char:FindFirstChild("Humanoid")
+        if hum and hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+    end)
+    table.insert(immortalConnections, healthConn)
+    local damageConn = LocalPlayer.CharacterAdded:Connect(function(newChar)
+        task.wait(0.5)
+        local hum = newChar:FindFirstChild("Humanoid")
+        if hum then
+            hum.Health = hum.MaxHealth
+            local breakConn = hum:GetPropertyChangedSignal("Health"):Connect(function()
+                if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+            end)
+            table.insert(immortalConnections, breakConn)
+        end
+    end)
+    table.insert(immortalConnections, damageConn)
+end
+
+local function applyImmortality()
+    clearImmortality()
+    if not immortalEnabled then return end
+    if currentImmortality == "v1" then startImmortalV1()
+    elseif currentImmortality == "v2" then startImmortalV2()
+    elseif currentImmortality == "v3" then startImmortalV3() end
+end
+
+-- ============================================
+-- DESYNC
+-- ============================================
+local desyncActive = false
+
+local function enableMobileDesync()
+    pcall(function()
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local humanoid = character:WaitForChild("Humanoid")
+        local packages = ReplicatedStorage:WaitForChild("Packages", 5)
+        if not packages then Print("❌ Packages no encontrado") return false end
+        local netFolder = packages:WaitForChild("Net", 5)
+        if not netFolder then Print("❌ Net folder no encontrado") return false end
+        local useItemRemote = netFolder:WaitForChild("RE/UseItem", 5)
+        local teleportRemote = netFolder:WaitForChild("RE/QuantumCloner/OnTeleport", 5)
+        if not useItemRemote or not teleportRemote then Print("❌ Remotos no encontrados") return false end
+        local tool
+        for _, toolName in ipairs({"Quantum Cloner", "Brainrot", "brainrot"}) do
+            tool = backpack:FindFirstChild(toolName) or character:FindFirstChild(toolName)
+            if tool then break end
+        end
+        if not tool then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") then tool = item break end
+            end
+        end
+        if tool and tool.Parent == backpack then
+            humanoid:EquipTool(tool)
+            task.wait(0.5)
+        end
+        if setfflag then setfflag("WorldStepMax", "-9999999999") end
+        task.wait(0.2)
+        useItemRemote:FireServer()
+        task.wait(1)
+        teleportRemote:FireServer()
+        task.wait(2)
+        if setfflag then setfflag("WorldStepMax", "-1") end
+        Print("✅ Desync activado!")
+        return true
+    end)
+    return true
+end
+
+local function disableMobileDesync()
+    pcall(function()
+        if setfflag then setfflag("WorldStepMax", "-1") end
+        Print("❌ Desync desactivado")
+    end)
+end
+
+-- ============================================
+-- TELEGUIADO
+-- ============================================
+local guidedOn = false
+local guidedConn = nil
+
+local function toggleGuided()
+    guidedOn = not guidedOn
+    if guidedOn then
+        guidedConn = RunService.RenderStepped:Connect(function()
+            if guidedOn and LocalPlayer.Character then
+                local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Velocity = workspace.CurrentCamera.CFrame.LookVector * 25
+                end
+            end
+        end)
+    else
+        if guidedConn then guidedConn:Disconnect() guidedConn = nil end
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+    end
+end
+
+-- ============================================
+-- SPEED BOOSTER
+-- ============================================
+local speedActive = false
+local speedConn = nil
+local baseSpeed = 27
+
+local function getMovementInput()
+    local char = LocalPlayer.Character
+    if not char then return Vector3.new(0, 0, 0) end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return Vector3.new(0, 0, 0) end
+    local moveVector = hum.MoveDirection
+    if moveVector.Magnitude > 0.1 then
+        return Vector3.new(moveVector.X, 0, moveVector.Z).Unit
+    end
+    return Vector3.new(0, 0, 0)
+end
+
+local function startSpeedControl()
+    if speedConn then return end
+    speedConn = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local inputDirection = getMovementInput()
+        if inputDirection.Magnitude > 0 then
+            hrp.AssemblyLinearVelocity = Vector3.new(
+                inputDirection.X * baseSpeed,
+                hrp.AssemblyLinearVelocity.Y,
+                inputDirection.Z * baseSpeed
+            )
+        else
+            hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
+        end
+    end)
+end
+
+local function stopSpeedControl()
+    if speedConn then speedConn:Disconnect() speedConn = nil end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, char.HumanoidRootPart.AssemblyLinearVelocity.Y, 0)
+    end
+end
+
+-- ============================================
+-- 3RD FLOOR
+-- ============================================
+local floorActive = false
+local platform = nil
+local floorConn = nil
+
+local function destroyPlatform()
+    if platform then platform:Destroy() platform = nil end
+    floorActive = false
+    if floorConn then floorConn:Disconnect() floorConn = nil end
+end
+
+local function createPlatform()
+    if platform then destroyPlatform() end
+    local root = GetRoot()
+    platform = Instance.new("Part")
+    platform.Size = Vector3.new(6, 0.5, 6)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 0
+    platform.Material = Enum.Material.Plastic
+    platform.Color = Color3.fromRGB(255, 200, 0)
+    platform.Position = root.Position - Vector3.new(0, root.Size.Y/2 + platform.Size.Y/2, 0)
+    platform.Parent = workspace
+    floorActive = true
+    floorConn = RunService.Heartbeat:Connect(function()
+        if platform and LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                platform.Position = Vector3.new(hrp.Position.X, platform.Position.Y, hrp.Position.Z)
+            end
+        end
+    end)
+end
+
+-- ============================================
+-- ESP DE JUGADORES
+-- ============================================
+local function createPlayerESP(character, playerName)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local box = Instance.new("BoxHandleAdornment")
+    box.Size = character:GetExtentsSize()
+    box.Adornee = character
+    box.Color3 = Color3.fromRGB(0, 0, 0)
+    box.Transparency = 0.7
+    box.AlwaysOnTop = true
+    box.ZIndex = 5
+    box.Parent = hrp
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee = hrp
+    billboard.Size = UDim2.new(0, 80, 0, 15)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = hrp
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 0.4
+    label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    label.Text = playerName
+    label.Font = Enum.Font.Arcade
+    label.TextSize = 10
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Parent = billboard
+end
+
+local function setupPlayerESP(player)
+    if player == LocalPlayer then return end
+    local function onChar(char)
+        task.wait(1)
+        createPlayerESP(char, player.Name)
+    end
+    if player.Character then onChar(player.Character) end
+    player.CharacterAdded:Connect(onChar)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do setupPlayerESP(p) end
+Players.PlayerAdded:Connect(setupPlayerESP)
+
+-- ============================================
+-- INTERFAZ - CREAR BOTONES EN SCROLLINGFRAME
+-- ============================================
+local scrollPoints = Instance.new("ScrollingFrame")
+scrollPoints.Size = UDim2.new(1, -20, 0, 140)
+scrollPoints.Position = UDim2.new(0, 10, 0, 500)
+scrollPoints.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+scrollPoints.BorderSizePixel = 0
+scrollPoints.ScrollBarThickness = 6
+scrollPoints.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollPoints.Parent = mainFrame
+
+local layoutPoints = Instance.new("UIListLayout")
+layoutPoints.Padding = UDim.new(0, 3)
+layoutPoints.Parent = scrollPoints
+
+-- Inputs
+local nameBox = Instance.new("TextBox")
+nameBox.Size = UDim2.new(1, -20, 0, 30)
+nameBox.Position = UDim2.new(0, 10, 0, 135)
+nameBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+nameBox.BorderSizePixel = 0
+nameBox.TextColor3 = Color3.fromRGB(0, 255, 0)
+nameBox.Font = Enum.Font.Code
+nameBox.TextSize = 14
+nameBox.PlaceholderText = "Nombre del punto (ENTER para guardar)"
+nameBox.Text = ""
+nameBox.ClearTextOnFocus = false
+nameBox.Parent = mainFrame
+
 local coordBox = Instance.new("TextBox")
 coordBox.Size = UDim2.new(1, -20, 0, 30)
-coordBox.Position = UDim2.new(0, 10, 0, 325)
+coordBox.Position = UDim2.new(0, 10, 0, 170)
 coordBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 coordBox.BorderSizePixel = 0
 coordBox.TextColor3 = Color3.fromRGB(0, 255, 0)
@@ -179,404 +619,374 @@ coordBox.TextSize = 14
 coordBox.PlaceholderText = "Coordenadas X,Y,Z (ej: 100,20,-50)"
 coordBox.Text = ""
 coordBox.ClearTextOnFocus = false
-coordBox.Parent = main
+coordBox.Parent = mainFrame
 
--- Botón ver coords
-local showCoordBtn = Instance.new("TextButton")
-showCoordBtn.Size = UDim2.new(0, 245, 0, 30)
-showCoordBtn.Position = UDim2.new(0, 10, 0, 360)
-showCoordBtn.Text = "Ver Coordenadas"
-showCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-showCoordBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-showCoordBtn.BorderSizePixel = 0
-showCoordBtn.Font = Enum.Font.Code
-showCoordBtn.TextSize = 14
-showCoordBtn.Parent = main
-
--- Botón tp coords
-local tpCoordBtn = Instance.new("TextButton")
-tpCoordBtn.Size = UDim2.new(0, 245, 0, 30)
-tpCoordBtn.Position = UDim2.new(0, 265, 0, 360)
-tpCoordBtn.Text = "TP a Coordenadas"
-tpCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tpCoordBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-tpCoordBtn.BorderSizePixel = 0
-tpCoordBtn.Font = Enum.Font.Code
-tpCoordBtn.TextSize = 14
-tpCoordBtn.Parent = main
-
--- Lista puntos
-local listFrame = Instance.new("Frame")
-listFrame.Size = UDim2.new(1, -20, 0, 160)
-listFrame.Position = UDim2.new(0, 10, 0, 400)
-listFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
-listFrame.BorderSizePixel = 0
-listFrame.Parent = main
-
-local listTitle = Instance.new("TextLabel")
-listTitle.Size = UDim2.new(1, 0, 0, 20)
-listTitle.BackgroundTransparency = 1
-listTitle.Text = "Lista de puntos guardados:"
-listTitle.TextColor3 = Color3.fromRGB(0, 255, 0)
-listTitle.Font = Enum.Font.Code
-listTitle.TextSize = 14
-listTitle.TextXAlignment = Enum.TextXAlignment.Left
-listTitle.Parent = listFrame
-
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -25)
-scroll.Position = UDim2.new(0, 0, 0, 25)
-scroll.BackgroundTransparency = 1
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.Parent = listFrame
-
-local layout = Instance.new("UIListLayout")
-layout.Parent = scroll
-layout.Padding = UDim.new(0, 3)
-
--- Botones abajo
+-- Botones
 local saveBtn = Instance.new("TextButton")
-saveBtn.Size = UDim2.new(0, 160, 0, 30)
-saveBtn.Position = UDim2.new(0, 10, 0, 570)
-saveBtn.Text = "Guardar Punto"
+saveBtn.Size = UDim2.new(0, 120, 0, 30)
+saveBtn.Position = UDim2.new(0, 10, 0, 210)
+saveBtn.Text = "💾 Guardar"
 saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 saveBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
 saveBtn.BorderSizePixel = 0
 saveBtn.Font = Enum.Font.Code
 saveBtn.TextSize = 14
-saveBtn.Parent = main
+saveBtn.Parent = mainFrame
 
 local tpBtn = Instance.new("TextButton")
-tpBtn.Size = UDim2.new(0, 160, 0, 30)
-tpBtn.Position = UDim2.new(0, 180, 0, 570)
-tpBtn.Text = "TP al Punto"
+tpBtn.Size = UDim2.new(0, 120, 0, 30)
+tpBtn.Position = UDim2.new(0, 140, 0, 210)
+tpBtn.Text = "📍 TP"
 tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 tpBtn.BorderSizePixel = 0
 tpBtn.Font = Enum.Font.Code
 tpBtn.TextSize = 14
-tpBtn.Parent = main
+tpBtn.Parent = mainFrame
 
 local delBtn = Instance.new("TextButton")
-delBtn.Size = UDim2.new(0, 160, 0, 30)
-delBtn.Position = UDim2.new(0, 350, 0, 570)
-delBtn.Text = "Eliminar Punto"
+delBtn.Size = UDim2.new(0, 120, 0, 30)
+delBtn.Position = UDim2.new(0, 270, 0, 210)
+delBtn.Text = "🗑️ Eliminar"
 delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 delBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0)
 delBtn.BorderSizePixel = 0
 delBtn.Font = Enum.Font.Code
 delBtn.TextSize = 14
-delBtn.Parent = main
+delBtn.Parent = mainFrame
 
--- Refrescar lista
-local function RefreshList()
-	for _, v in pairs(scroll:GetChildren()) do
-		if v:IsA("TextButton") then
-			v:Destroy()
-		end
-	end
+local tpCoordBtn = Instance.new("TextButton")
+tpCoordBtn.Size = UDim2.new(0, 140, 0, 30)
+tpCoordBtn.Position = UDim2.new(0, 10, 0, 250)
+tpCoordBtn.Text = "📌 TP a Coord"
+tpCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpCoordBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+tpCoordBtn.BorderSizePixel = 0
+tpCoordBtn.Font = Enum.Font.Code
+tpCoordBtn.TextSize = 14
+tpCoordBtn.Parent = mainFrame
 
-	for i, data in ipairs(Points) do
-		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(1, -5, 0, 22)
-		btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-		btn.BorderSizePixel = 0
-		btn.TextColor3 = Color3.fromRGB(0, 255, 0)
-		btn.Font = Enum.Font.Code
-		btn.TextSize = 14
+local showCoordBtn = Instance.new("TextButton")
+showCoordBtn.Size = UDim2.new(0, 140, 0, 30)
+showCoordBtn.Position = UDim2.new(0, 160, 0, 250)
+showCoordBtn.Text = "📍 Ver Coord"
+showCoordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+showCoordBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+showCoordBtn.BorderSizePixel = 0
+showCoordBtn.Font = Enum.Font.Code
+showCoordBtn.TextSize = 14
+showCoordBtn.Parent = mainFrame
 
-		if SelectedIndex == i then
-			btn.Text = ">> [" .. i .. "] " .. data.Name
-		else
-			btn.Text = "   [" .. i .. "] " .. data.Name
-		end
+-- Inmortalidad toggle y dropdown
+local immortToggle = Instance.new("TextButton")
+immortToggle.Size = UDim2.new(0, 160, 0, 30)
+immortToggle.Position = UDim2.new(0, 10, 0, 290)
+immortToggle.Text = "[ OFF ] Inmortalidad"
+immortToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+immortToggle.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+immortToggle.BorderSizePixel = 0
+immortToggle.Font = Enum.Font.Code
+immortToggle.TextSize = 12
+immortToggle.Parent = mainFrame
 
-		btn.Parent = scroll
+local immortDropdown = Instance.new("TextButton")
+immortDropdown.Size = UDim2.new(0, 160, 0, 30)
+immortDropdown.Position = UDim2.new(0, 180, 0, 290)
+immortDropdown.Text = "v1 - Auto-revive"
+immortDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+immortDropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+immortDropdown.BorderSizePixel = 0
+immortDropdown.Font = Enum.Font.Code
+immortDropdown.TextSize = 12
+immortDropdown.Parent = mainFrame
 
-		btn.MouseButton1Click:Connect(function()
-			SelectedIndex = i
-			Print("Seleccionaste: " .. data.Name .. " (Slot " .. i .. ")")
-			RefreshList()
-		end)
-	end
+-- Otros toggles
+local smoothToggle = Instance.new("TextButton")
+smoothToggle.Size = UDim2.new(0, 160, 0, 30)
+smoothToggle.Position = UDim2.new(0, 10, 0, 330)
+smoothToggle.Text = "[ OFF ] TP Flotando"
+smoothToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+smoothToggle.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+smoothToggle.BorderSizePixel = 0
+smoothToggle.Font = Enum.Font.Code
+smoothToggle.TextSize = 12
+smoothToggle.Parent = mainFrame
 
-	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
-end
+local guidedBtn = Instance.new("TextButton")
+guidedBtn.Size = UDim2.new(0, 160, 0, 30)
+guidedBtn.Position = UDim2.new(0, 180, 0, 330)
+guidedBtn.Text = "[ OFF ] Teleguiado"
+guidedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+guidedBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+guidedBtn.BorderSizePixel = 0
+guidedBtn.Font = Enum.Font.Code
+guidedBtn.TextSize = 12
+guidedBtn.Parent = mainFrame
 
--- Guardar punto
-local function SavePoint(name)
-	if not name or name == "" then
-		Print("ERROR: escribe un nombre.")
-		return
-	end
+local speedBtn = Instance.new("TextButton")
+speedBtn.Size = UDim2.new(0, 160, 0, 30)
+speedBtn.Position = UDim2.new(0, 10, 0, 370)
+speedBtn.Text = "[ OFF ] Speed Booster"
+speedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+speedBtn.BorderSizePixel = 0
+speedBtn.Font = Enum.Font.Code
+speedBtn.TextSize = 12
+speedBtn.Parent = mainFrame
 
-	local root = GetRoot()
-	table.insert(Points, {Name = name, CFrame = root.CFrame})
-	SelectedIndex = #Points
+local floorBtn = Instance.new("TextButton")
+floorBtn.Size = UDim2.new(0, 160, 0, 30)
+floorBtn.Position = UDim2.new(0, 180, 0, 370)
+floorBtn.Text = "[ OFF ] 3rd Floor"
+floorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+floorBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+floorBtn.BorderSizePixel = 0
+floorBtn.Font = Enum.Font.Code
+floorBtn.TextSize = 12
+floorBtn.Parent = mainFrame
 
-	Print("Guardado: " .. name .. " (Slot " .. SelectedIndex .. ")")
-	RefreshList()
-end
+local desyncBtn = Instance.new("TextButton")
+desyncBtn.Size = UDim2.new(0, 160, 0, 30)
+desyncBtn.Position = UDim2.new(0, 10, 0, 410)
+desyncBtn.Text = "[ OFF ] Desync"
+desyncBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+desyncBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+desyncBtn.BorderSizePixel = 0
+desyncBtn.Font = Enum.Font.Code
+desyncBtn.TextSize = 12
+desyncBtn.Parent = mainFrame
 
--- TP flotando
-local function SmoothTeleport(targetCFrame)
-	local root = GetRoot()
-	root.Anchored = true
+local espToggle = Instance.new("TextButton")
+espToggle.Size = UDim2.new(0, 160, 0, 30)
+espToggle.Position = UDim2.new(0, 180, 0, 410)
+espToggle.Text = "[ ON ] ESP Players"
+espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+espToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 50)
+espToggle.BorderSizePixel = 0
+espToggle.Font = Enum.Font.Code
+espToggle.TextSize = 12
+espToggle.Parent = mainFrame
 
-	local startPos = root.Position
-	local endPos = targetCFrame.Position
-	local distance = (endPos - startPos).Magnitude
+-- ============================================
+-- ACCIONES DE BOTONES
+-- ============================================
+nameBox.FocusLost:Connect(function(enter)
+    if enter and nameBox.Text ~= "" then
+        savePoint(nameBox.Text, Color3.new(1, 0, 0))
+        nameBox.Text = ""
+        refreshPointList()
+    end
+end)
 
-	local duration = distance / smoothSpeed
-	if duration < 0.1 then duration = 0.1 end
-	if duration > 8 then duration = 8 end
-
-	local startTime = tick()
-
-	while tick() - startTime < duration do
-		local alpha = (tick() - startTime) / duration
-		local newPos = startPos:Lerp(endPos, alpha)
-		root.CFrame = CFrame.new(newPos) * (targetCFrame - targetCFrame.Position)
-		RunService.RenderStepped:Wait()
-	end
-
-	root.CFrame = targetCFrame
-	root.Anchored = false
-end
-
-local function TeleportToCFrame(targetCFrame)
-	if smoothMode then
-		SmoothTeleport(targetCFrame)
-	else
-		GetRoot().CFrame = targetCFrame
-	end
-end
-
-local function TeleportToPoint()
-	if not SelectedIndex or not Points[SelectedIndex] then
-		Print("ERROR: selecciona un punto.")
-		return
-	end
-
-	Print("TP -> " .. Points[SelectedIndex].Name)
-	TeleportToCFrame(Points[SelectedIndex].CFrame)
-end
-
-local function TeleportToCoords(text)
-	if not text or text == "" then
-		Print("ERROR: escribe X,Y,Z.")
-		return
-	end
-
-	text = text:gsub(" ", "")
-	local parts = string.split(text, ",")
-
-	if #parts < 3 then
-		Print("ERROR: formato incorrecto. Ej: 100,20,-50")
-		return
-	end
-
-	local x = tonumber(parts[1])
-	local y = tonumber(parts[2])
-	local z = tonumber(parts[3])
-
-	if not x or not y or not z then
-		Print("ERROR: coordenadas inválidas.")
-		return
-	end
-
-	Print("TP coordenadas -> (" .. x .. ", " .. y .. ", " .. z .. ")")
-	TeleportToCFrame(CFrame.new(x, y, z))
-end
-
-local function DeletePoint()
-	if not SelectedIndex or not Points[SelectedIndex] then
-		Print("ERROR: no hay punto seleccionado.")
-		return
-	end
-
-	Print("Eliminado: " .. Points[SelectedIndex].Name)
-	table.remove(Points, SelectedIndex)
-	SelectedIndex = nil
-	RefreshList()
-end
-
--- Eventos botones
 saveBtn.MouseButton1Click:Connect(function()
-	SavePoint(inputBox.Text)
+    if nameBox.Text ~= "" then
+        savePoint(nameBox.Text, Color3.new(1, 0, 0))
+        nameBox.Text = ""
+        refreshPointList()
+    else
+        Print("Escribe un nombre primero")
+    end
 end)
 
 tpBtn.MouseButton1Click:Connect(function()
-	TeleportToPoint()
+    if selectedPoint then
+        local _, msg = loadPoint(selectedPoint)
+        Print(msg)
+    else
+        Print("Selecciona un punto")
+    end
 end)
 
 delBtn.MouseButton1Click:Connect(function()
-	DeletePoint()
-end)
-
-showCoordBtn.MouseButton1Click:Connect(function()
-	local pos = GetRoot().Position
-	Print("Coords: X=" .. math.floor(pos.X) .. " Y=" .. math.floor(pos.Y) .. " Z=" .. math.floor(pos.Z))
+    if selectedPoint then
+        local _, msg = deletePoint(selectedPoint)
+        Print(msg)
+        selectedPoint = nil
+    else
+        Print("Selecciona un punto")
+    end
 end)
 
 tpCoordBtn.MouseButton1Click:Connect(function()
-	TeleportToCoords(coordBox.Text)
+    local text = coordBox.Text:gsub(" ", "")
+    local parts = {}
+    for part in string.gmatch(text, "[^,]+") do table.insert(parts, tonumber(part)) end
+    if #parts >= 3 and parts[1] and parts[2] and parts[3] then
+        TeleportToCFrame(CFrame.new(parts[1], parts[2], parts[3]))
+        Print("TP a (" .. parts[1] .. ", " .. parts[2] .. ", " .. parts[3] .. ")")
+    else
+        Print("Formato inválido. Ej: 100,20,-50")
+    end
 end)
 
+showCoordBtn.MouseButton1Click:Connect(function()
+    local pos = GetRoot().Position
+    Print("Coords: X=" .. math.floor(pos.X) .. " Y=" .. math.floor(pos.Y) .. " Z=" .. math.floor(pos.Z))
+end)
+
+immortToggle.MouseButton1Click:Connect(function()
+    immortalEnabled = not immortalEnabled
+    immortToggle.Text = immortalEnabled and "[ ON ] Inmortalidad" or "[ OFF ] Inmortalidad"
+    immortToggle.BackgroundColor3 = immortalEnabled and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(80, 0, 0)
+    applyImmortality()
+end)
+
+local immortMethods = {"v1 - Auto-revive", "v2 - Loop + Anti-caída", "v3 - Override total"}
+local immortIndex = 1
+immortDropdown.MouseButton1Click:Connect(function()
+    immortIndex = immortIndex % #immortMethods + 1
+    local method = string.sub(immortMethods[immortIndex], 1, 2)
+    currentImmortality = method
+    immortDropdown.Text = immortMethods[immortIndex]
+    if immortalEnabled then applyImmortality() end
+    Print("Método inmortalidad: " .. immortMethods[immortIndex])
+end)
+
+smoothToggle.MouseButton1Click:Connect(function()
+    smoothMode = not smoothMode
+    smoothToggle.Text = smoothMode and "[ ON ] TP Flotando" or "[ OFF ] TP Flotando"
+    smoothToggle.BackgroundColor3 = smoothMode and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(80, 0, 0)
+    Print(smoothMode and "TP Flotando activado" or "TP Flotando desactivado")
+end)
+
+guidedBtn.MouseButton1Click:Connect(function()
+    toggleGuided()
+    guidedBtn.Text = guidedOn and "[ ON ] Teleguiado" or "[ OFF ] Teleguiado"
+    guidedBtn.BackgroundColor3 = guidedOn and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(80, 0, 0)
+end)
+
+speedBtn.MouseButton1Click:Connect(function()
+    speedActive = not speedActive
+    speedBtn.Text = speedActive and "[ ON ] Speed Booster" or "[ OFF ] Speed Booster"
+    speedBtn.BackgroundColor3 = speedActive and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(80, 0, 0)
+    if speedActive then
+        startSpeedControl()
+    else
+        stopSpeedControl()
+    end
+end)
+
+floorBtn.MouseButton1Click:Connect(function()
+    if not floorActive then
+        createPlatform()
+        floorBtn.Text = "[ ON ] 3rd Floor"
+        floorBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+    else
+        destroyPlatform()
+        floorBtn.Text = "[ OFF ] 3rd Floor"
+        floorBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+    end
+end)
+
+desyncBtn.MouseButton1Click:Connect(function()
+    desyncActive = not desyncActive
+    desyncBtn.Text = desyncActive and "[ ON ] Desync" or "[ OFF ] Desync"
+    desyncBtn.BackgroundColor3 = desyncActive and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(80, 0, 0)
+    if desyncActive then
+        enableMobileDesync()
+    else
+        disableMobileDesync()
+    end
+end)
+
+espToggle.MouseButton1Click:Connect(function()
+    -- ESP de puntos
+    espEnabled = not espEnabled
+    espToggle.Text = espEnabled and "[ ON ] ESP Players" or "[ OFF ] ESP Players"
+    espToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(80, 0, 0)
+    if espEnabled then
+        updateESP()
+    else
+        for _, objs in pairs(espObjects) do
+            pcall(function()
+                if objs.billboard then objs.billboard:Destroy() end
+                if objs.part then objs.part:Destroy() end
+            end)
+        end
+        espObjects = {}
+    end
+end)
+
+-- Cerrar y minimizar
 closeBtn.MouseButton1Click:Connect(function()
-	gui:Destroy()
+    screenGui:Destroy()
 end)
 
+local minimizedHub = false
 miniBtn.MouseButton1Click:Connect(function()
-	minimized = not minimized
-
-	local visible = not minimized
-	output.Visible = visible
-	inputBox.Visible = visible
-	listFrame.Visible = visible
-	saveBtn.Visible = visible
-	tpBtn.Visible = visible
-	delBtn.Visible = visible
-	toggleDeath.Visible = visible
-	toggleSmooth.Visible = visible
-	speedBox.Visible = visible
-	coordBox.Visible = visible
-	showCoordBtn.Visible = visible
-	tpCoordBtn.Visible = visible
-
-	if minimized then
-		main.Size = UDim2.new(0, 520, 0, 35)
-		main.CanvasSize = UDim2.new(0, 0, 0, 35)
-		miniBtn.Text = "+"
-	else
-		main.Size = UDim2.new(0, 520, 0, 460)
-		main.CanvasSize = UDim2.new(0, 0, 0, 900)
-		miniBtn.Text = "-"
-	end
+    minimizedHub = not minimizedHub
+    local visible = not minimizedHub
+    output.Visible = visible
+    nameBox.Visible = visible
+    coordBox.Visible = visible
+    saveBtn.Visible = visible
+    tpBtn.Visible = visible
+    delBtn.Visible = visible
+    tpCoordBtn.Visible = visible
+    showCoordBtn.Visible = visible
+    immortToggle.Visible = visible
+    immortDropdown.Visible = visible
+    smoothToggle.Visible = visible
+    guidedBtn.Visible = visible
+    speedBtn.Visible = visible
+    floorBtn.Visible = visible
+    desyncBtn.Visible = visible
+    espToggle.Visible = visible
+    scrollPoints.Visible = visible
+    if minimizedHub then
+        mainFrame.Size = UDim2.new(0, 520, 0, 35)
+        mainFrame.CanvasSize = UDim2.new(0, 0, 0, 35)
+        miniBtn.Text = "+"
+    else
+        mainFrame.Size = UDim2.new(0, 520, 0, 560)
+        mainFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+        miniBtn.Text = "-"
+    end
 end)
 
-inputBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		SavePoint(inputBox.Text)
-		inputBox.Text = ""
-	end
-end)
-
-toggleDeath.MouseButton1Click:Connect(function()
-	autoRespawnTP = not autoRespawnTP
-
-	if autoRespawnTP then
-		toggleDeath.Text = "[ ON ] Auto TP al morir"
-		toggleDeath.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
-		Print("Auto TP al morir ACTIVADO.")
-	else
-		toggleDeath.Text = "[ OFF ] Auto TP al morir"
-		toggleDeath.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-		Print("Auto TP al morir DESACTIVADO.")
-	end
-end)
-
-toggleSmooth.MouseButton1Click:Connect(function()
-	smoothMode = not smoothMode
-
-	if smoothMode then
-		toggleSmooth.Text = "[ ON ] Modo TP Flotando"
-		toggleSmooth.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
-		Print("Modo TP Flotando ACTIVADO.")
-	else
-		toggleSmooth.Text = "[ OFF ] Modo TP Flotando"
-		toggleSmooth.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-		Print("Modo TP Flotando DESACTIVADO.")
-	end
-end)
-
-speedBox.FocusLost:Connect(function()
-	local num = tonumber(speedBox.Text)
-	if num and num >= 5 and num <= 500 then
-		smoothSpeed = num
-		Print("Velocidad TP Flotando -> " .. tostring(smoothSpeed))
-	end
-end)
-
--- Detectar muerte
-local function SetupCharacter(char)
-	local humanoid = char:WaitForChild("Humanoid")
-	local root = char:WaitForChild("HumanoidRootPart")
-
-	humanoid.Died:Connect(function()
-		if autoRespawnTP then
-			lastDeathCFrame = root.CFrame
-			Print("Muerte detectada, guardando posición...")
-		end
-	end)
-end
-
-player.CharacterAdded:Connect(function(char)
-	SetupCharacter(char)
-
-	task.wait(0.2)
-
-	if autoRespawnTP and lastDeathCFrame then
-		char:WaitForChild("HumanoidRootPart").CFrame = lastDeathCFrame
-		Print("TP automático completado.")
-	end
-end)
-
-if player.Character then
-	SetupCharacter(player.Character)
-end
-
--- DRAG PC + CELULAR
+-- Drag
 local dragging = false
-local dragStart
-local startPos
-
-local function StartDrag(input)
-	dragging = true
-	dragStart = input.Position
-	startPos = main.Position
-end
-
-local function EndDrag()
-	dragging = false
-end
-
+local dragStart, startPos
 topbar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		StartDrag(input)
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
 end)
-
 topbar.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		EndDrag()
-	end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		main.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
 
 -- RGB anim
 local hue = 0
 RunService.RenderStepped:Connect(function()
-	hue = hue + 0.002
-	if hue > 1 then hue = 0 end
-	rgbLine.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+    hue = hue + 0.002
+    if hue > 1 then hue = 0 end
+    rgbLine.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
 end)
 
-Print("Sistema iniciado.")
-Print("ENTER para guardar puntos.")
-Print("Modo TP flotando disponible.")
-Print("TP por coordenadas disponible.")
-RefreshList()
+-- Toggle UI
+local uiVisible = false
+toggleButton.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    mainFrame.Visible = uiVisible
+end)
+
+-- Inicializar
+loadPoints()
+updateESP()
+refreshPointList()
+Print("✅ HUB PRO CARGADO")
+Print("📌 Botón flotante 'Lipe' para abrir/cerrar")
+Print("💀 Inmortalidad con 3 métodos")
+Print("⚡ Speed Booster | 🚀 Teleguiado | 🏗️ 3rd Floor")
+Print("🌀 Desync integrado")
